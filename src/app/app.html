@@ -2,12 +2,39 @@
 <div class="announcement">
   A little less travel. A little more care. <strong>Meet Forum Labs.</strong>
 </div>
-<header class="site-header">
+<header class="site-header" (keydown.escape)="closeMenu(menuToggle)">
   <div class="shell header">
     <a routerLink="/" class="brand" aria-label="Forum Labs home"
       ><img src="assets/forum-labs-header.png" alt="Forum Labs" width="1488" height="1057"
     /></a>
-    <nav aria-label="Main navigation">
+    <button
+      #menuToggle
+      class="menu-toggle"
+      type="button"
+      aria-controls="main-navigation"
+      [attr.aria-expanded]="menuOpen()"
+      (click)="menuOpen.set(!menuOpen())"
+    >
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+      >
+        <path
+          [attr.d]="menuOpen() ? 'M6 6l12 12M6 18L18 6' : 'M4 6h16M4 12h16M4 18h16'"
+          stroke-linecap="round"
+        />
+      </svg>
+      {{ menuOpen() ? 'Close' : 'Menu' }}
+    </button>
+    <nav
+      id="main-navigation"
+      aria-label="Main navigation"
+      [class.menu-open]="menuOpen()"
+      (click)="closeMenu()"
+    >
       <a routerLink="/tests" routerLinkActive="selected">Tests & packages</a
       ><a routerLink="/bookings" routerLinkActive="selected">My bookings</a
       ><a routerLink="/reports" routerLinkActive="selected">Reports</a
@@ -17,7 +44,9 @@
 </header>
 @if (store.preview()) {
   <div class="preview-banner">
-    Preview mode · Sample catalog, people and slots. No real bookings or patient reports.
+    <span class="desktop-preview"
+      >Preview mode · Sample catalog, people and slots. No real bookings or patient reports.</span
+    ><span class="mobile-preview">Preview only · No real bookings or patient reports.</span>
   </div>
 }
 @if (store.busy()) {
@@ -47,20 +76,30 @@
   </div>
   <a routerLink="/tests">Explore tests →</a>
 </footer>
-<a
-  class="button floating-cart"
-  routerLink="/cart"
-  [attr.aria-label]="'View cart, ' + store.lines().length + ' items'"
->
-  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-    <path
-      d="M3 4h2l2.2 10.2a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L21 7H6"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    />
-    <circle cx="10" cy="20" r="1" />
-    <circle cx="18" cy="20" r="1" />
-  </svg>
-  <span>View cart</span>
-  <span class="count" aria-hidden="true">{{ store.lines().length }}</span>
-</a>
+@if (showFloatingCart()) {
+  <a
+    class="button floating-cart"
+    routerLink="/cart"
+    [attr.aria-label]="
+      'View cart, ' + store.lines().length + (store.lines().length === 1 ? ' item' : ' items')
+    "
+  >
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+    >
+      <path
+        d="M3 4h2l2.2 10.2a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L21 7H6"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+      <circle cx="10" cy="20" r="1" />
+      <circle cx="18" cy="20" r="1" />
+    </svg>
+    <span>View cart</span>
+    <span class="count" aria-hidden="true">{{ store.lines().length }}</span>
+  </a>
+}

@@ -26,6 +26,10 @@ export class Journey {
   protected readonly kind = signal('');
   protected readonly sort = signal('popular');
   protected readonly fasting = signal('');
+  protected readonly filtersOpen = signal(false);
+  protected readonly activeFilters = computed(
+    () => Number(!!this.kind()) + Number(!!this.fasting()) + Number(this.sort() !== 'popular'),
+  );
   protected readonly money = money;
   protected readonly instant = instant;
   protected readonly image = image;
@@ -74,6 +78,10 @@ export class Journey {
   });
   private detailSequence = 0;
   constructor() {
+    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
+      this.query.set(params.get('q') ?? '');
+      this.category.set(params.get('category') ?? '');
+    });
     this.route.data.pipe(takeUntilDestroyed()).subscribe((d) => {
       this.view.set(d['view']);
       if (d['detail']) {
@@ -149,9 +157,23 @@ export class Journey {
     if (ok && (this.store.previewComplete() || this.store.confirmed()))
       await this.router.navigateByUrl('/confirmation');
   }
-  protected async next(): Promise<void> {
-    await this.store.next();
+  private focusStep(): void {
+    const heading = document.getElementById('checkout-step-heading');
+    heading?.focus({ preventScroll: true });
+    heading?.scrollIntoView({ block: 'start' });
   }
+  protected async next(): Promise<void> {
+    if (await this.store.next()) this.focusStep();
+  }
+  protected back(): void {
+    this.store.back();
+    this.focusStep();
+  }
+  protected closeFilters(trigger: HTMLButtonElement): void {
+    this.filtersOpen.set(false);
+    trigger.focus();
+  }
+
   protected addFamily(): void {
     void this.store.addFamily({
       name: this.familyName,

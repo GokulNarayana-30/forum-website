@@ -128,31 +128,74 @@ nav a.selected {
 .skip:focus {
   top: 15px;
 }
+
+.menu-toggle,
+.mobile-preview {
+  display: none;
+}
 @media (max-width: 800px) {
   .header {
-    gap: 4px;
-    flex-wrap: wrap;
+    position: relative;
+    gap: 12px;
+    padding-block: 3px;
+    min-height: 60px;
   }
   .brand img {
-    width: 150px;
-    height: 58px;
+    width: 140px;
+    height: 54px;
   }
-  nav {
-    order: 3;
-    width: 100%;
-    justify-content: space-between;
-    border-top: 1px solid var(--border);
-    padding-top: 4px;
-    gap: 10px;
-    font-size: 11px;
-  }
-  nav a {
+  .menu-toggle {
     display: inline-flex;
     align-items: center;
-    min-height: 40px;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 8px 12px;
+    border: 1px solid var(--outline);
+    border-radius: 12px;
+    background: var(--white);
+    color: var(--primary);
+    font: inherit;
+    font-size: 12px;
+  }
+  .menu-toggle svg {
+    width: 20px;
+    height: 20px;
+  }
+  nav {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    padding: 12px;
+    flex-direction: column;
+    gap: 2px;
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 0 0 16px 16px;
+    box-shadow: 0 10px 20px #11182714;
+  }
+  nav.menu-open {
+    display: flex;
+  }
+  nav a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+  .announcement,
+  .desktop-preview {
+    display: none;
+  }
+  .mobile-preview {
+    display: inline;
   }
   .preview-banner {
     font-size: 10px;
+    padding-block: 5px;
   }
   .footer {
     flex-wrap: wrap;

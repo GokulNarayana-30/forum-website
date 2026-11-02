@@ -307,7 +307,7 @@ forum-summary {
   letter-spacing: -0.5px;
   margin: 12px 0 24px;
 }
-.summary > p,
+.summary-body > p,
 .summary-lines p {
   display: flex;
   justify-content: space-between;
@@ -524,6 +524,252 @@ forum-summary {
 
 @media (max-width: 800px) {
   :root {
-    --website-header-height: 115px;
+    --website-header-height: 60px;
+  }
+}
+
+/* Mobile navigation, discovery and checkout use the same server-owned cart. */
+.summary-toggle,
+.mobile-filters-toggle,
+.mobile-sort,
+.mobile-filter-done {
+  display: none;
+}
+.summary-toggle {
+  font: inherit;
+}
+@media (max-width: 760px) {
+  input:not([type='checkbox']),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+  :root body .journey {
+    padding-top: 20px;
+    padding-bottom: 35px;
+  }
+  :root body .journey h1 {
+    font-size: 28px;
+    letter-spacing: -0.8px;
+    margin: 8px 0 12px;
+  }
+  :root body .journey .lead {
+    font-size: 13px;
+    margin-bottom: 18px;
+  }
+  :root body .journey .breadcrumbs {
+    display: none;
+  }
+  :root body .journey.catalog-page > .eyebrow {
+    display: none;
+  }
+  :root body .journey.catalog-page > .lead {
+    display: none;
+  }
+  :root body .journey .catalog-controls {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 18px 0 10px;
+  }
+  :root body .journey .catalog-controls .search {
+    flex-basis: 100%;
+    margin: 0;
+  }
+  :root body .journey .catalog-controls .desktop-sort {
+    display: none;
+  }
+  :root body .journey .mobile-filters-toggle {
+    display: inline-flex;
+    padding: 9px 15px;
+    gap: 6px;
+    min-height: 44px;
+    font-size: 12px;
+  }
+  :root body .journey .browse-layout {
+    gap: 16px;
+  }
+  :root body .journey .browse-sidebar {
+    min-width: 0;
+  }
+  :root body .journey .browse-sidebar > h2 {
+    display: none;
+  }
+  :root body .journey .category-list {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 8px;
+    padding: 2px 2px 6px;
+    margin-bottom: 0;
+    scrollbar-width: thin;
+  }
+  :root body .journey .category-list button {
+    flex-shrink: 0;
+    white-space: nowrap;
+    min-height: 44px;
+    border-radius: 24px;
+    padding: 9px 13px;
+    font-size: 12px;
+  }
+  :root body .journey .additional-filters {
+    display: none;
+  }
+  :root body .journey .additional-filters.is-open {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 18px;
+    margin-top: 12px;
+    background: var(--blush-light);
+    border-radius: 14px;
+  }
+  :root body .journey .additional-filters label {
+    margin: 0;
+  }
+  :root body .journey .mobile-sort {
+    display: block;
+  }
+  :root body .journey .mobile-filter-done {
+    display: inline-flex;
+    min-height: 44px;
+  }
+  :root body .journey .product-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  :root body .journey .product-card {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr);
+    align-items: stretch;
+  }
+  :root body .journey .product-image {
+    padding: 8px;
+    justify-content: center;
+  }
+  :root body .journey .product-image img {
+    width: 56px;
+    height: 64px;
+  }
+  :root body .journey .product-image > span {
+    display: none;
+  }
+  :root body .journey .product-content {
+    padding: 12px;
+  }
+  :root body .journey .product-content h2 {
+    font-size: 15px;
+    line-height: 1.35;
+    margin: 5px 0 6px;
+  }
+  :root body .journey .product-content .hint {
+    margin-bottom: 3px;
+  }
+  :root body .journey .product-bottom {
+    flex-direction: row;
+    align-items: center;
+    padding-top: 8px;
+    gap: 12px;
+  }
+  :root body .journey .product-bottom strong {
+    font-size: 16px;
+  }
+  :root body .journey .product-bottom .button {
+    width: auto;
+    min-width: 76px;
+    min-height: 44px;
+  }
+  :root body .journey .results-count {
+    margin-bottom: 12px;
+  }
+  :root body .journey.checkout-page {
+    padding-bottom: 120px;
+  }
+  :root body .journey .checkout-layout {
+    gap: 14px;
+  }
+  :root body .journey .checkout-layout forum-summary {
+    grid-row: 1;
+  }
+  .summary {
+    padding: 0;
+    overflow: hidden;
+  }
+  .summary-heading {
+    display: none;
+  }
+  .summary-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    min-height: 68px;
+    background: transparent;
+    border: 0;
+    padding: 14px 18px;
+    text-align: left;
+    color: var(--primary);
+    font-size: 13px;
+  }
+  .summary-toggle small {
+    display: block;
+    color: var(--body);
+    font-size: 10px;
+    margin-top: 4px;
+  }
+  .summary-toggle > strong {
+    margin-left: auto;
+    white-space: nowrap;
+    font-size: 18px;
+  }
+  .summary-body {
+    padding: 0 18px 18px;
+  }
+  .summary-body.is-collapsed {
+    display: none;
+  }
+  :root body .journey.checkout-page .progress {
+    display: flex;
+    gap: 6px;
+    margin: 16px 0 22px;
+  }
+  :root body .journey.checkout-page .progress li {
+    font-size: 0;
+    gap: 0;
+  }
+  :root body .journey.checkout-page .progress li.current {
+    font-size: 11px;
+    flex: 3;
+    gap: 7px;
+    white-space: nowrap;
+  }
+  :root body .journey.checkout-page .progress li > span {
+    width: 24px;
+    height: 24px;
+    font-size: 10px;
+  }
+  :root body .journey.checkout-page .step-actions {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 12px;
+    background: var(--white);
+    border-top: 1px solid var(--border);
+    margin: 0;
+    padding: 12px max(18px, env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom))
+      max(18px, env(safe-area-inset-left));
+    box-shadow: 0 -3px 16px #1118270d;
+  }
+  :root body .journey.checkout-page .step-actions .button {
+    min-height: 48px;
+  }
+  :root body .journey.checkout-page .step-actions .button:last-child {
+    flex: 1;
   }
 }

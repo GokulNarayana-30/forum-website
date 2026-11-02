@@ -1,4 +1,9 @@
-<main id="main" class="shell journey">
+<main
+  id="main"
+  class="shell journey"
+  [class.catalog-page]="view() === 'tests'"
+  [class.checkout-page]="view() === 'checkout'"
+>
   <div class="breadcrumbs">
     <a routerLink="/">Home</a><span aria-hidden="true">/</span
     ><span>{{
@@ -17,48 +22,87 @@
             type="search"
             placeholder="Search tests, packages or test codes"
             [ngModel]="query()"
-            (ngModelChange)="query.set($event)" /></label
-        ><label
+            (ngModelChange)="query.set($event)"
+        /></label>
+        <label class="desktop-sort"
           >Sort by<select [ngModel]="sort()" (ngModelChange)="sort.set($event)">
             <option value="popular">Catalog order</option>
             <option value="price-low">Price: low to high</option>
             <option value="price-high">Price: high to low</option>
           </select></label
         >
+        <button
+          #filterToggle
+          class="mobile-filters-toggle button outline"
+          aria-controls="catalog-filter-panel"
+          [attr.aria-expanded]="filtersOpen()"
+          (click)="filtersOpen.set(!filtersOpen())"
+        >
+          Filter & sort
+          @if (activeFilters()) {
+            <span>({{ activeFilters() }})</span>
+          }
+        </button>
       </div>
       <div class="browse-layout">
         <aside class="browse-sidebar">
           <h2>Browse by category</h2>
-          <div class="category-list">
-            <button [class.chosen]="!category()" (click)="category.set('')">All categories</button>
+          <div class="category-list" role="group" aria-label="Browse test categories">
+            <button
+              [class.chosen]="!category()"
+              [attr.aria-pressed]="!category()"
+              (click)="category.set('')"
+            >
+              All categories
+            </button>
             @for (c of store.categories(); track c.id) {
-              <button [class.chosen]="category() === c.id" (click)="category.set(c.id)">
+              <button
+                [class.chosen]="category() === c.id"
+                [attr.aria-pressed]="category() === c.id"
+                (click)="category.set(c.id)"
+              >
                 {{ c.name }}
               </button>
             }
           </div>
-          <label
-            >Show<select [ngModel]="kind()" (ngModelChange)="kind.set($event)">
-              <option value="">Tests & packages</option>
-              <option value="test">Tests only</option>
-              <option value="package">Packages only</option>
-            </select></label
-          ><label
-            >Preparation<select [ngModel]="fasting()" (ngModelChange)="fasting.set($event)">
-              <option value="">Any preparation</option>
-              <option value="yes">Fasting required</option>
-              <option value="no">No fasting</option>
-            </select></label
-          ><button
-            class="text-link"
-            (click)="category.set(''); query.set(''); kind.set(''); fasting.set('')"
-          >
-            Clear filters
-          </button>
+          <div class="additional-filters" id="catalog-filter-panel" [class.is-open]="filtersOpen()">
+            <label class="mobile-sort"
+              >Sort by<select [ngModel]="sort()" (ngModelChange)="sort.set($event)">
+                <option value="popular">Catalog order</option>
+                <option value="price-low">Price: low to high</option>
+                <option value="price-high">Price: high to low</option>
+              </select></label
+            >
+            <label
+              >Show<select [ngModel]="kind()" (ngModelChange)="kind.set($event)">
+                <option value="">Tests & packages</option>
+                <option value="test">Tests only</option>
+                <option value="package">Packages only</option>
+              </select></label
+            >
+            <label
+              >Preparation<select [ngModel]="fasting()" (ngModelChange)="fasting.set($event)">
+                <option value="">Any preparation</option>
+                <option value="yes">Fasting required</option>
+                <option value="no">No fasting</option>
+              </select></label
+            >
+            <button
+              class="text-link"
+              (click)="
+                category.set(''); query.set(''); kind.set(''); fasting.set(''); sort.set('popular')
+              "
+            >
+              Clear filters
+            </button>
+            <button class="button mobile-filter-done" (click)="closeFilters(filterToggle)">
+              Show {{ filtered().length }} {{ filtered().length === 1 ? 'result' : 'results' }}
+            </button>
+          </div>
         </aside>
         <section aria-label="Test results">
           <p class="results-count" role="status">
-            {{ filtered().length }} tests & packages
+            {{ filtered().length }} {{ filtered().length === 1 ? 'result' : 'results' }}
             @if (store.preview()) {
               · Sample catalog
             }
@@ -66,7 +110,10 @@
           <div class="product-grid">
             @for (item of filtered(); track item.id) {
               <article class="product-card">
-                <a [routerLink]="['/tests', item.id]" class="product-image"
+                <a
+                  [routerLink]="['/tests', item.id]"
+                  class="product-image"
+                  [attr.aria-label]="'View details for ' + item.name"
                   ><img
                     [src]="image(item.id)"
                     alt=""
@@ -84,7 +131,8 @@
                   <p class="hint">
                     {{ item.sample_type || 'Sample type confirmed when booking' }}
                     @if (item.parameter_count) {
-                      · {{ item.parameter_count }} parameters
+                      · {{ item.parameter_count }}
+                      {{ item.parameter_count === 1 ? 'parameter' : 'parameters' }}
                     }
                   </p>
                   <p class="hint">
@@ -375,7 +423,7 @@
         <div class="checkout-layout">
           <section class="panel">
             <p class="eyebrow">STEP {{ store.step() + 1 }} OF 6</p>
-            <h2>{{ steps[store.step()] }}</h2>
+            <h2 id="checkout-step-heading" tabindex="-1">{{ steps[store.step()] }}</h2>
             @switch (store.step()) {
               @case (0) {
                 <p class="lead small-lead">Who are these tests for?</p>
@@ -611,7 +659,7 @@
               <button
                 class="button outline"
                 [disabled]="!store.canEdit() || store.step() === 0"
-                (click)="store.back()"
+                (click)="back()"
               >
                 ← Back
               </button>

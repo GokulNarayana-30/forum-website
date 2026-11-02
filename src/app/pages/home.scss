@@ -143,53 +143,6 @@ h2 {
   font-size: 12px;
   color: var(--body);
 }
-.search {
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  max-width: 600px;
-  border: 1px solid var(--outline);
-  border-radius: 12px;
-  padding: 11px 18px;
-}
-.search > span:first-child {
-  font-size: 27px;
-  line-height: 1;
-  color: var(--primary);
-}
-.search input {
-  width: 100%;
-  min-width: 0;
-  background: none;
-  border: 0;
-  color: var(--ink);
-  font-size: 12px;
-  padding: 8px;
-}
-.filters {
-  display: flex;
-  gap: 9px;
-  flex-wrap: wrap;
-  margin-block: 22px 14px;
-}
-.filters button {
-  border: 1px solid var(--outline);
-  border-radius: 30px;
-  background: var(--white);
-  color: var(--body);
-  padding: 8px 17px;
-  font-size: 11px;
-}
-.filters button.active {
-  background: var(--primary);
-  color: var(--white);
-  border-color: var(--primary);
-}
-.preview-note {
-  color: var(--body);
-  font-size: 10px;
-  margin-bottom: 25px;
-}
 .test-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -242,18 +195,6 @@ h2 {
 }
 .detail-button span {
   font-size: 20px;
-}
-.test-description {
-  margin-top: 16px;
-}
-.empty {
-  grid-column: 1/-1;
-  padding: 35px;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-}
-.empty p {
-  margin: 12px 0;
 }
 .how-section {
   background: var(--blush-light);
@@ -346,68 +287,11 @@ h2 {
   margin-top: 15px;
   color: var(--body);
 }
-.footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: start;
-  gap: 25px;
-  padding-block: 50px 30px;
-  color: var(--body);
-  font-size: 10px;
-}
-.footer strong {
-  color: var(--primary);
-  letter-spacing: 2px;
-}
-.footer p {
-  margin-top: 5px;
-}
-.footer a {
-  color: var(--primary);
-}
-.notice {
-  position: fixed;
-  bottom: 25px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(620px, calc(100% - 32px));
-  padding: 20px;
-  display: flex;
-  align-items: start;
-  gap: 15px;
-  background: var(--white);
-  border: 2px solid var(--primary);
-  border-radius: 16px;
-  box-shadow: 0 10px 40px #11182725;
-  font-size: 12px;
-  z-index: 5;
-}
-.notice button {
-  background: none;
-  border: 0;
-  color: var(--primary);
-  font-size: 24px;
-  min-width: 30px;
-}
-.skip {
-  position: absolute;
-  top: -100px;
-  left: 15px;
-  padding: 10px;
-  background: var(--white);
-  z-index: 10;
-}
-.skip:focus {
-  top: 15px;
-}
 
 /* Responsive page layout. */
 @media (max-width: 1000px) {
   .shell {
     width: calc(100% - 48px);
-  }
-  nav {
-    gap: 15px;
   }
   .hero {
     gap: 25px;
@@ -422,15 +306,6 @@ h2 {
   .how-layout {
     gap: 45px;
   }
-  .brand {
-    gap: 9px;
-  }
-  .brand img {
-    width: 100px;
-  }
-  .header {
-    gap: 15px;
-  }
   .hero-art {
     padding-inline: 18px;
   }
@@ -444,30 +319,6 @@ h2 {
 @media (max-width: 700px) {
   .shell {
     width: calc(100% - 36px);
-  }
-  .announcement {
-    font-size: 10px;
-  }
-  .header {
-    flex-wrap: wrap;
-    padding-block: 17px;
-  }
-  .brand {
-    font-size: 11px;
-  }
-  .header .small {
-    font-size: 10px;
-    gap: 12px;
-    padding: 10px 13px;
-  }
-  nav {
-    order: 3;
-    width: 100%;
-    justify-content: center;
-    border-top: 1px solid var(--border);
-    padding-top: 16px;
-    font-size: 11px;
-    gap: 30px;
   }
   .hero {
     grid-template-columns: 1fr;
@@ -532,16 +383,6 @@ h2 {
   .test-card > p {
     min-height: 38px;
   }
-  .test-card .test-description {
-    min-height: 0;
-  }
-  .filters {
-    gap: 7px;
-  }
-  .filters button {
-    padding: 7px 12px;
-    font-size: 10px;
-  }
   .how-layout,
   .faq-layout {
     grid-template-columns: 1fr;
@@ -557,12 +398,166 @@ h2 {
   .closing h2 {
     font-size: 27px;
   }
-  .footer {
-    flex-wrap: wrap;
-    padding-block: 35px;
-    gap: 22px;
+}
+.mobile-discovery,
+.mobile-intro,
+.mobile-collection-art {
+  display: none;
+}
+@media (max-width: 760px) {
+  .mobile-discovery {
+    display: block;
+    padding-top: 20px;
   }
-  .footer > div {
+  .mobile-discovery h2 {
+    font-size: 20px;
+    letter-spacing: -0.5px;
+    margin: 0 0 14px;
+  }
+  .home-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--outline);
+    border-radius: 12px;
+    padding: 5px 6px 5px 12px;
+  }
+  .home-search input {
+    border: 0;
+    background: none;
+    font-size: 16px;
+    padding: 8px 0;
+    margin: 0;
+    min-width: 0;
+  }
+  .home-search button {
+    flex-shrink: 0;
+    border: 0;
+    border-radius: 9px;
+    background: var(--primary);
+    color: white;
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 22px;
+  }
+  .home-categories {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 12px 2px 6px;
+    scrollbar-width: thin;
+  }
+  .home-categories a {
+    white-space: nowrap;
+    padding: 8px 13px;
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    font-size: 12px;
+    color: var(--primary);
+    background: var(--blush-light);
+  }
+  .hero {
+    grid-template-columns: 1fr;
+    padding-block: 24px;
+    gap: 0;
+  }
+  .hero h1 {
+    font-size: 30px;
+    letter-spacing: -1px;
+    margin: 0 0 12px;
+  }
+  .hero-copy > .eyebrow,
+  .hero-art,
+  .desktop-intro,
+  .principles {
+    display: none;
+  }
+  .mobile-intro {
+    display: inline;
+  }
+  .intro {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .hero-actions {
+    margin-top: 18px;
+    gap: 18px;
+  }
+  .hero-note {
+    margin-top: 14px;
+  }
+  .section {
+    padding-block: 28px;
+  }
+  .catalog {
+    padding-top: 12px;
+  }
+  .section-heading {
+    margin-bottom: 16px;
+  }
+  .section-heading h2 {
+    font-size: 24px;
+    margin-top: 8px;
+  }
+  .section-heading .text-link {
+    display: inline-block;
+    margin-top: 10px;
+    min-height: 30px;
+  }
+  .test-card {
+    padding: 14px;
+  }
+  .test-top {
+    min-height: 48px;
+    flex-direction: row;
+    align-items: center;
+  }
+  .test-top img {
+    width: 44px;
+    height: 44px;
+  }
+  .test-top .eyebrow {
+    font-size: 8px;
+    letter-spacing: 0.6px;
+  }
+  .test-card h3 {
+    font-size: 14px;
+    line-height: 1.35;
+    margin: 10px 0 6px;
+  }
+  .test-card p {
+    font-size: 11px;
+  }
+  .test-card .home-price {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--primary);
+    margin-top: 8px;
+  }
+  .detail-button {
+    margin-top: 12px;
+    padding-top: 8px;
+    font-size: 10px;
+  }
+  .mobile-collection-art {
+    display: block;
+    margin-block: 12px 28px;
+    padding: 14px;
+    background: var(--blush-light);
+    border-radius: 16px;
+    text-align: center;
+  }
+  .mobile-collection-art img {
     width: 100%;
+    height: 150px;
+    object-fit: contain;
+  }
+  .mobile-collection-art p {
+    font-size: 12px;
+    color: var(--primary);
+    margin-top: 8px;
   }
 }

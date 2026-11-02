@@ -1,11 +1,33 @@
 <main id="main">
+  <section class="shell mobile-discovery" aria-labelledby="mobile-discovery-heading">
+    <h2 id="mobile-discovery-heading">Find your next health check.</h2>
+    <form class="home-search" role="search" (ngSubmit)="search()">
+      <label class="sr-only" for="home-test-search">Search tests and packages</label
+      ><input
+        id="home-test-search"
+        name="q"
+        type="search"
+        [(ngModel)]="searchQuery"
+        placeholder="Search tests & packages"
+      /><button type="submit" aria-label="Search tests and packages">→</button>
+    </form>
+    <nav class="home-categories" aria-label="Browse test categories">
+      @for (category of store.categories(); track category.id) {
+        <a routerLink="/tests" [queryParams]="{ category: category.id }">{{ category.name }}</a>
+      }
+    </nav>
+  </section>
   <section class="hero shell" aria-labelledby="hero-title">
     <div class="hero-copy">
       <p class="eyebrow">FORUM HOSPITAL · HOME SAMPLE COLLECTION</p>
-      <h1 id="hero-title">Good health starts<br />with a little <em>care.</em></h1>
+      <h1 id="hero-title">Good health starts with a little <em>care.</em></h1>
       <p class="intro">
-        Make room for your health, without rearranging your day. Explore lab tests and home sample
-        collection with Forum Labs.
+        <span class="desktop-intro"
+          >Make room for your health, without rearranging your day. Explore lab tests and home
+          sample collection with Forum Labs.</span
+        ><span class="mobile-intro"
+          >Lab tests and home collection, with care from Forum Hospital.</span
+        >
       </p>
       <div class="hero-actions">
         <a class="button" routerLink="/tests">Explore lab tests <span aria-hidden="true">↗</span></a
@@ -66,7 +88,12 @@
             </div>
             <h3>{{ item.name }}</h3>
             <p>
-              {{ item.parameter_count ? item.parameter_count + ' parameters' : item.sample_type }}
+              {{
+                item.parameter_count
+                  ? item.parameter_count +
+                    (item.parameter_count === 1 ? ' parameter' : ' parameters')
+                  : item.sample_type
+              }}
             </p>
             <p class="home-price">{{ money(itemPrice(item)) }}</p>
             <span class="detail-button">Explore details <span aria-hidden="true">→</span></span></a
@@ -74,6 +101,16 @@
         </article>
       }
     </div>
+  </section>
+  <section class="shell mobile-collection-art" aria-label="Home sample collection">
+    <img
+      src="assets/banner_home_collection.webp"
+      alt="Illustration of home sample collection"
+      width="600"
+      height="400"
+      loading="lazy"
+    />
+    <p>Home collection. Your space, your comfort.</p>
   </section>
   <section class="how-section" id="how-it-works" aria-labelledby="how-heading">
     <div class="shell section how-layout">
