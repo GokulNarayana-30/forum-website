@@ -23,10 +23,10 @@ export interface Item {
 }
 export interface Detail {
   item: Item;
-  description: string;
+  description: string | null;
   preparation: string[];
   parameters: { name: string }[];
-  inclusions: { item_id: string; name: string; parameter_count?: number }[];
+  inclusions: { test_id?: string; item_id?: string; name: string; parameter_count?: number }[];
   faqs: { question: string; answer: string }[];
 }
 export interface Person {
