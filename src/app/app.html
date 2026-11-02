@@ -14,9 +14,6 @@
     ><a routerLink="/reports" routerLinkActive="selected">Reports</a
     ><a routerLink="/account" routerLinkActive="selected">Account</a>
   </nav>
-  <a class="button small" routerLink="/cart"
-    >Cart <span class="count">{{ store.lines().length }}</span></a
-  >
 </header>
 @if (store.preview()) {
   <div class="preview-banner">
@@ -50,3 +47,20 @@
   </div>
   <a routerLink="/tests">Explore tests →</a>
 </footer>
+<a
+  class="button floating-cart"
+  routerLink="/cart"
+  [attr.aria-label]="'View cart, ' + store.lines().length + ' items'"
+>
+  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+    <path
+      d="M3 4h2l2.2 10.2a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L21 7H6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <circle cx="10" cy="20" r="1" />
+    <circle cx="18" cy="20" r="1" />
+  </svg>
+  <span>View cart</span>
+  <span class="count" aria-hidden="true">{{ store.lines().length }}</span>
+</a>

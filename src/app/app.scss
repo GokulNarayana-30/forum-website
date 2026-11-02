@@ -39,10 +39,26 @@ nav a.selected {
   background: var(--white);
   color: var(--primary);
   border-radius: 50%;
-  width: 23px;
+  min-width: 25px;
+  padding-inline: 5px;
   height: 23px;
   display: grid;
   place-items: center;
+}
+.floating-cart {
+  position: fixed;
+  right: max(24px, env(safe-area-inset-right));
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  z-index: 30;
+  gap: 12px;
+  min-height: 58px;
+  padding: 14px 20px;
+  box-shadow: 0 6px 24px #11182726;
+}
+.floating-cart svg {
+  width: 23px;
+  height: 23px;
+  flex-shrink: 0;
 }
 .announcement {
   text-align: center;
@@ -72,7 +88,7 @@ nav a.selected {
 }
 .working {
   position: fixed;
-  bottom: 20px;
+  bottom: calc(100px + env(safe-area-inset-bottom));
   right: 20px;
   padding: 10px 18px;
   border-radius: 24px;
@@ -87,7 +103,7 @@ nav a.selected {
   gap: 25px;
   font-size: 10px;
   color: var(--body);
-  padding-block: 45px;
+  padding-block: 45px calc(110px + env(safe-area-inset-bottom));
 }
 .footer strong,
 .footer a {
@@ -131,7 +147,10 @@ nav a.selected {
   .footer {
     flex-wrap: wrap;
   }
-  .header .button {
-    margin-left: auto;
+  .floating-cart {
+    right: max(16px, env(safe-area-inset-right));
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    min-height: 54px;
+    padding: 12px 17px;
   }
 }
