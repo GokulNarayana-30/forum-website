@@ -1,21 +1,61 @@
-# Forum Labs website
+# Forum Labs customer website
 
-Local customer website, created at the owner's request while mobile app work continues. Uses the existing Angular SSR starter from `../apps/web`, with its dependency manifest and lockfile unchanged. `apps/web` remains untouched; this is the requested working folder.
+Angular SSR customer website in the owner-requested `forum-website` folder. Uses the dependency manifest and lockfile from `../apps/web` without adding packages. The original `apps/web` starter is preserved.
 
-## Run
+## Run locally
 
 ```sh
 cd /Users/gokul/forum/forum-website
 npm ci --ignore-scripts
-npm start -- --port 4300
+npm start -- --host 127.0.0.1 --port 4300 --no-hmr
 ```
 
-Open http://localhost:4300. Production check: `npm run build`.
+Open http://127.0.0.1:4300. Checks:
 
-## First version
+```sh
+npm run build
+npm test -- --watch=false
+```
 
-Responsive Forum-branded homepage with bundled Montserrat and existing mobile brand illustrations; searchable illustrative test cards, category filters, expandable details, collection explanation and FAQs. No remote fonts or asset services.
+## Customer journey
 
-This is a local UI preview. The test selection is explicitly illustrative. Sign-in, live catalog/prices, serviceability, slots, bookings and report access still need implementation against the existing NestJS API. Booking buttons explain this limitation and never create a booking. No patient data is collected or stored. Payment remains cash or UPI at collection.
+- Home and searchable/filterable tests and packages, individual detail routes with preparation, inclusions, parameters and eligibility.
+- Guest cart, sign-in gate and six checkout steps matching `apps/mobile`: Patients → Address → Slot → Preparation → Coupon → Review.
+- Desktop checkout has a persistent order summary; phone layouts stack the summary and controls.
+- Account profile, adding family members with consent/guardian fields, and adding manual collection addresses.
+- My bookings with server tracking events, and released reports with fresh authenticated document-link requests and access auditing.
+- Explicit empty/error/refusal states, terms/privacy information and help page. No online payment: cash or UPI at collection.
 
-Keep Angular SSR for indexable catalog pages. Use Supabase Auth for identity and call only `apps/api` for business data and external services. Follow `../docs/DECISIONS.md` and `../docs/design/BRAND.md`. No database or e2e runs before Phase 17. No new packages were introduced for this starter.
+## Preview and live configuration
+
+`src/app/core/public-config.ts` defaults to `mode: 'preview'`. Preview uses only the app's existing sample catalog, fictional people and fixed example slots. It makes no API calls and ends with **Preview complete**, never a fake booking confirmation. Forms for real personal details are hidden in preview.
+
+The live API adapter is implemented but **not connected or proven against a live service**. To activate later, configure only these public values and rebuild:
+
+- `mode: 'live'`
+- `apiBaseUrl`: the existing NestJS base including `/v1`
+- `supabaseUrl`: the existing project's HTTPS URL
+- `publishableKey`: a Supabase `sb_publishable_…` public key
+
+Never add secrets, service-role keys or database URLs. No `.env` is needed or read by this website. API business data goes only through NestJS; Supabase is used only for Google Auth. API failures in live mode never fall back to sample catalog data.
+
+The owner must allow the website origin in the API's `CORS_ORIGINS` and the exact website `/auth/callback` URL in Supabase's redirect allowlist. Local `127.0.0.1:4300` is a different origin from the existing admin's `localhost:4200`. These external settings were not changed. Also add the exact deployment hostname to `angular.json` → build options → security → allowedHosts; the local build permits only localhost and 127.0.0.1.
+
+The SDK-free Google PKCE implementation follows the API's existing `public-deletion-client.ts`. Tokens stay in memory; refresh tokens are discarded. Reload or expiration requires sign-in again. A short-lived PKCE verifier, guest item IDs and unresolved checkout key/account ID can use sessionStorage. Patient names, addresses, report links and diagnostic-consent records are not persisted there.
+
+## Booking safety
+
+Live prices, eligibility, collection fees, coupons and capacity are owned by the server. Booking uses server cart/quote/address/slot IDs, not a client-calculated total. Address changes clear the slot. Review requires preparation acknowledgement and explicit diagnostic consent, without marketing opt-in.
+
+One placement attempt freezes its body and idempotency key in memory. A lost response is recovered using `/checkout/attempts/{key}/order` before retrying the exact same POST. The UI locks edits while that outcome is unresolved. Only an actual `order_placed` response or recovered server order creates a confirmation. Expired quotes/holds and business refusals cannot become confirmation screens.
+
+Only the key/account ID is retained across reload. If a recovered attempt has no server order yet, the website blocks a fresh POST because the original consent record is intentionally not persisted. Check My bookings/support to resolve it. This deliberately conservative recovery path needs live verification before launch.
+
+## Remaining launch work
+
+- Configure and verify the real API, Google callback, CORS, public key and hospital-approved terms, privacy, diagnostic-consent wording and contact details. Current legal copy is explicitly marked as development copy.
+- Run DB and e2e proof in Phase 17. These checks have not been performed here.
+- Finish secondary parity: editing/removing saved family/addresses, coupon discovery, server-side alias/symptom search, doctor attribution picker, cancellation/rescheduling/recollection actions, receipts, support tickets and notification preferences. Current booking tracking is read-only; Help sends no messages.
+- Cross-device and accessibility verification, session-expiry UX and uncertain-attempt recovery should be reviewed before public use. No production-readiness claim is made.
+
+Follow `../docs/DECISIONS.md`, `../docs/design/BRAND.md` and `../AGENTS.md`. This owner-requested website work is outside the numbered phase plans; no roadmap phase is marked complete.

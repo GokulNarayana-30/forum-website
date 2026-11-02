@@ -1,0 +1,177 @@
+<main id="main">
+  <section class="hero shell" aria-labelledby="hero-title">
+    <div class="hero-copy">
+      <p class="eyebrow">FORUM HOSPITAL · HOME SAMPLE COLLECTION</p>
+      <h1 id="hero-title">Good health starts<br />with a little <em>care.</em></h1>
+      <p class="intro">
+        Make room for your health, without rearranging your day. Explore lab tests and home sample
+        collection with Forum Labs.
+      </p>
+      <div class="hero-actions">
+        <a class="button" routerLink="/tests">Explore lab tests <span aria-hidden="true">↗</span></a
+        ><a class="text-link" href="#how-it-works"
+          >See how it works <span aria-hidden="true">→</span></a
+        >
+      </div>
+      <p class="hero-note"><span aria-hidden="true">✳</span> Cash or UPI at collection</p>
+    </div>
+    <div class="hero-art">
+      <div class="art-top">
+        <span class="eyebrow">CARE, CLOSER TO YOU</span
+        ><span class="decorative-star" aria-hidden="true">✳</span>
+      </div>
+      <img
+        src="assets/banner_home_collection.webp"
+        alt="Illustration of home sample collection"
+        width="600"
+        height="400"
+        fetchpriority="high"
+      />
+      <div class="art-caption">
+        <span class="caption-icon" aria-hidden="true">⌂</span>
+        <div>
+          <strong>Your space. Your comfort.</strong
+          ><span>Home collection, thoughtfully explained.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+  <div class="principles shell">
+    <p><span aria-hidden="true">01</span> Explore tests at your pace</p>
+    <p><span aria-hidden="true">02</span> Check availability before booking</p>
+    <p><span aria-hidden="true">03</span> Pay at collection</p>
+  </div>
+  <section class="catalog section shell" id="tests" aria-labelledby="tests-heading">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">A SMALL STEP FOR YOUR HEALTH</p>
+        <h2 id="tests-heading">Find your starting point.</h2>
+      </div>
+      <a class="text-link" routerLink="/tests">View all tests & packages →</a>
+    </div>
+    <div class="test-grid">
+      @for (item of featured(); track item.id) {
+        <article class="test-card">
+          <a [routerLink]="['/tests', item.id]"
+            ><div class="test-top">
+              <span class="eyebrow">{{ item.kind === 'package' ? 'PACKAGE' : 'LAB TEST' }}</span
+              ><img
+                [src]="image(item.id)"
+                alt=""
+                width="88"
+                height="88"
+                loading="lazy"
+                (error)="$any($event.target).style.visibility = 'hidden'"
+              />
+            </div>
+            <h3>{{ item.name }}</h3>
+            <p>
+              {{ item.parameter_count ? item.parameter_count + ' parameters' : item.sample_type }}
+            </p>
+            <p class="home-price">{{ money(itemPrice(item)) }}</p>
+            <span class="detail-button">Explore details <span aria-hidden="true">→</span></span></a
+          >
+        </article>
+      }
+    </div>
+  </section>
+  <section class="how-section" id="how-it-works" aria-labelledby="how-heading">
+    <div class="shell section how-layout">
+      <div>
+        <p class="eyebrow">LESS TRAVEL. MORE CONVENIENCE.</p>
+        <h2 id="how-heading">From your doorstep<br />to the next step.</h2>
+        <p class="how-intro">
+          Here’s how the home collection journey is designed to work when you book online.
+        </p>
+        <a class="button" routerLink="/tests">
+          Choose your tests <span aria-hidden="true">↗</span>
+        </a>
+      </div>
+      <ol class="steps">
+        <li>
+          <span class="step-number">01</span>
+          <div>
+            <h3>Choose your tests</h3>
+            <p>
+              Browse tests and packages. Check the preparation details and ask your clinician if you
+              need guidance.
+            </p>
+          </div>
+        </li>
+        <li>
+          <span class="step-number">02</span>
+          <div>
+            <h3>Choose a collection slot</h3>
+            <p>Check your pincode, add your collection address and pick an available time.</p>
+          </div>
+        </li>
+        <li>
+          <span class="step-number">03</span>
+          <div>
+            <h3>Have your sample collected</h3>
+            <p>Pay the phlebotomist by cash or UPI at collection. There’s no online payment.</p>
+          </div>
+        </li>
+        <li>
+          <span class="step-number">04</span>
+          <div>
+            <h3>View your released report</h3>
+            <p>
+              Access released reports securely after signing in. Discuss the results with your
+              clinician.
+            </p>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </section>
+  <section class="shell section faq-layout" id="questions" aria-labelledby="faq-heading">
+    <div>
+      <p class="eyebrow">A LITTLE CLARITY</p>
+      <h2 id="faq-heading">Before you begin.</h2>
+      <p>Answers to a few common questions.</p>
+    </div>
+    <div class="faqs">
+      <details>
+        <summary>Can I book on the website today?</summary>
+        <p>
+          You can explore the booking journey in preview mode. No booking is created in preview.
+          Live bookings require Forum’s API and sign-in configuration.
+        </p>
+      </details>
+      <details>
+        <summary>Do I need to pay online?</summary>
+        <p>No. Payment is at collection, by cash or UPI to the phlebotomist.</p>
+      </details>
+      <details>
+        <summary>Is home collection available in my area?</summary>
+        <p>
+          Availability depends on your pincode and collection slots. The website will check these
+          with Forum’s API before you book; this preview cannot confirm serviceability.
+        </p>
+      </details>
+      <details>
+        <summary>Do I need to fast before my test?</summary>
+        <p>
+          Preparation depends on the test. Confirm the instructions with the lab when booking. Do
+          not change medicines or diet without appropriate clinical advice.
+        </p>
+      </details>
+      <details>
+        <summary>How will I receive my report?</summary>
+        <p>
+          Released reports will be available through secure, short-lived links after sign-in. This
+          preview does not contain patient reports.
+        </p>
+      </details>
+    </div>
+  </section>
+  <section class="shell closing">
+    <div>
+      <p class="eyebrow">FOR YOU. FOR YOUR FAMILY.</p>
+      <h2>A little care goes a long way.</h2>
+      <p>Start by exploring a test. Take the next step with your clinician.</p>
+    </div>
+    <a class="button" routerLink="/tests">Explore tests <span aria-hidden="true">↗</span></a>
+  </section>
+</main>
