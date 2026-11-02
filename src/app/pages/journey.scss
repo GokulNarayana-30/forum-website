@@ -164,7 +164,7 @@ s {
 }
 .detail-purchase {
   position: sticky;
-  top: 25px;
+  top: calc(var(--website-header-height) + 24px);
   border: 1px solid var(--border);
   border-radius: 20px;
   padding: 30px;

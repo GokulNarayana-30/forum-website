@@ -11,6 +11,7 @@
   font-display: swap;
 }
 :root {
+  --website-header-height: 70px;
   --primary: #714ea0;
   --primary-alt: #7f50a0;
   --pink: #d481b7;
@@ -27,7 +28,7 @@
 }
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 24px;
+  scroll-padding-top: calc(var(--website-header-height) + 16px);
 }
 body {
   margin: 0;
@@ -293,7 +294,7 @@ details form {
 forum-summary {
   display: block;
   position: sticky;
-  top: 25px;
+  top: calc(var(--website-header-height) + 24px);
 }
 .summary {
   border: 1px solid var(--border);
@@ -518,5 +519,11 @@ forum-summary {
   :root body .journey .coupon-form {
     align-items: stretch;
     flex-direction: column;
+  }
+}
+
+@media (max-width: 800px) {
+  :root {
+    --website-header-height: 115px;
   }
 }

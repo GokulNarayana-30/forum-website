@@ -2,16 +2,18 @@
 <div class="announcement">
   A little less travel. A little more care. <strong>Meet Forum Labs.</strong>
 </div>
-<header class="shell header">
-  <a routerLink="/" class="brand" aria-label="Forum Labs home"
-    ><img src="assets/forum-labs-header.png" alt="Forum Labs" width="1488" height="1057"
-  /></a>
-  <nav aria-label="Main navigation">
-    <a routerLink="/tests" routerLinkActive="selected">Tests & packages</a
-    ><a routerLink="/bookings" routerLinkActive="selected">My bookings</a
-    ><a routerLink="/reports" routerLinkActive="selected">Reports</a
-    ><a routerLink="/account" routerLinkActive="selected">Account</a>
-  </nav>
+<header class="site-header">
+  <div class="shell header">
+    <a routerLink="/" class="brand" aria-label="Forum Labs home"
+      ><img src="assets/forum-labs-header.png" alt="Forum Labs" width="1488" height="1057"
+    /></a>
+    <nav aria-label="Main navigation">
+      <a routerLink="/tests" routerLinkActive="selected">Tests & packages</a
+      ><a routerLink="/bookings" routerLinkActive="selected">My bookings</a
+      ><a routerLink="/reports" routerLinkActive="selected">Reports</a
+      ><a routerLink="/account" routerLinkActive="selected">Account</a>
+    </nav>
+  </div>
 </header>
 @if (store.preview()) {
   <div class="preview-banner">

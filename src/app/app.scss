@@ -1,3 +1,13 @@
+:host {
+  display: block;
+}
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--white);
+  box-shadow: 0 2px 10px #1118270d;
+}
 .header {
   display: flex;
   align-items: center;
