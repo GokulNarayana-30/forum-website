@@ -3,7 +3,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding-block: 6px;
+  padding-block: 4px;
 }
 /* Display the supplied transparent logo as one wordmark. The original PNG is preserved. */
 .brand {
@@ -11,8 +11,8 @@
   flex-shrink: 0;
 }
 .brand img {
-  width: 200px;
-  height: 78px;
+  width: 160px;
+  height: 62px;
   object-fit: cover;
   object-position: center 45%;
 }
@@ -120,19 +120,19 @@ nav a.selected {
 }
 @media (max-width: 800px) {
   .header {
-    gap: 6px;
+    gap: 4px;
     flex-wrap: wrap;
   }
   .brand img {
-    width: 180px;
-    height: 70px;
+    width: 150px;
+    height: 58px;
   }
   nav {
     order: 3;
     width: 100%;
     justify-content: space-between;
     border-top: 1px solid var(--border);
-    padding-top: 6px;
+    padding-top: 4px;
     gap: 10px;
     font-size: 11px;
   }
