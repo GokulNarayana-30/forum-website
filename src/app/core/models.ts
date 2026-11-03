@@ -163,3 +163,77 @@ export function itemImage(item: Item): string {
   return KNOWN_IMAGES.has(cat) ? `assets/${cat}.webp` : 'assets/banner_home_collection.webp';
 }
 export const steps = ['Patients', 'Address', 'Slot', 'Preparation', 'Coupon', 'Review'];
+
+/** A Home banner as the website shows it. The text comes from the API; the picture is the website one only. */
+export interface WebBanner {
+  id: string;
+  eyebrow: string;
+  headline: string;
+  body: string;
+  cta_label: string;
+  target_kind: string;
+  target_id: string | null;
+  /** An https address of the website picture (about 2:1), or null: the card then has no picture. */
+  web_image_url: string | null;
+}
+const MAX_BANNERS = 5;
+/**
+ * Keeps the banners the website can draw. The app's picture (image_url) is never used here: it is a
+ * tall 4:5 picture made for the app card. A banner with no headline is skipped, because the app fills
+ * those from its own price templates and the website has none.
+ */
+export function readBanners(raw: unknown): WebBanner[] {
+  if (!Array.isArray(raw)) return [];
+  const banners: WebBanner[] = [];
+  for (const entry of raw) {
+    if (banners.length >= MAX_BANNERS) break;
+    const b = entry as Record<string, unknown> | null;
+    const target = (b?.['target'] ?? null) as Record<string, unknown> | null;
+    if (
+      !b ||
+      typeof b['id'] !== 'string' ||
+      typeof b['headline'] !== 'string' ||
+      !b['headline'].trim() ||
+      typeof b['cta_label'] !== 'string' ||
+      typeof target?.['kind'] !== 'string'
+    )
+      continue;
+    const web = b['web_image_url'];
+    banners.push({
+      id: b['id'],
+      eyebrow: typeof b['eyebrow'] === 'string' ? b['eyebrow'] : '',
+      headline: b['headline'].trim(),
+      body: typeof b['body'] === 'string' ? b['body'] : '',
+      cta_label: b['cta_label'],
+      target_kind: target['kind'],
+      target_id: typeof target['target_id'] === 'string' ? target['target_id'] : null,
+      web_image_url: typeof web === 'string' && /^https:\/\/[^\s]+$/.test(web) ? web : null,
+    });
+  }
+  return banners;
+}
+/** Where a banner's button goes on the website, or null when it has no place to go (no button). */
+export function bannerLink(
+  banner: Pick<WebBanner, 'target_kind' | 'target_id'>,
+): { commands: string[]; query: Record<string, string> } | null {
+  const id = banner.target_id;
+  switch (banner.target_kind) {
+    case 'item':
+    case 'package':
+      return id ? { commands: ['/tests', id], query: {} } : null;
+    case 'category':
+      return id ? { commands: ['/tests'], query: { category: id } } : null;
+    case 'tests':
+      return { commands: ['/tests'], query: {} };
+    case 'home':
+      return { commands: ['/'], query: {} };
+    case 'support':
+      return { commands: ['/help'], query: {} };
+    case 'bookings':
+      return { commands: ['/bookings'], query: {} };
+    case 'reports_list':
+      return { commands: ['/reports'], query: {} };
+    default:
+      return null; // a coupon or "none" has nothing to open on the website
+  }
+}

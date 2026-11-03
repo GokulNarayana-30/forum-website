@@ -1,0 +1,32 @@
+@if (store.banners().length) {
+  <section class="shell banners" aria-label="Offers and updates from Forum Labs">
+    @for (banner of store.banners(); track banner.id) {
+      <article class="banner" [class.with-picture]="banner.web_image_url">
+        <div class="banner-text">
+          @if (banner.eyebrow) {
+            <p class="banner-eyebrow">{{ banner.eyebrow }}</p>
+          }
+          <h2>{{ banner.headline }}</h2>
+          @if (banner.body) {
+            <p class="banner-body">{{ banner.body }}</p>
+          }
+          @if (link(banner); as to) {
+            <a class="banner-button" [routerLink]="to.commands" [queryParams]="to.query">{{
+              banner.cta_label
+            }}</a>
+          }
+        </div>
+        @if (banner.web_image_url) {
+          <img
+            class="banner-picture"
+            [src]="banner.web_image_url"
+            alt=""
+            loading="lazy"
+            decoding="async"
+            referrerpolicy="no-referrer"
+          />
+        }
+      </article>
+    }
+  </section>
+}
