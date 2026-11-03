@@ -199,6 +199,7 @@
               }
               @case ('addresses') {
                 <p class="form-intro">Tell us where to come for your home sample collection.</p>
+                <forum-address-picker (located)="applyLocation($event)" />
                 <div class="form-grid">
                   <label
                     >Address type<select name="type" [(ngModel)]="addressForm.type">
@@ -219,6 +220,7 @@
                     >Street<input
                       name="street"
                       [(ngModel)]="addressForm.street"
+                      required
                       maxlength="200"
                       autocomplete="address-line2"
                   /></label>
@@ -229,6 +231,7 @@
                     >Pincode<input
                       name="pincode"
                       [(ngModel)]="addressForm.pincode"
+                      (ngModelChange)="clearCoordinates()"
                       required
                       pattern="[1-9][0-9]{5}"
                       inputmode="numeric"

@@ -2,11 +2,12 @@ import { Component, computed, effect, inject, signal, untracked } from '@angular
 import { FormsModule, NgForm } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { WebsiteStore } from '../core/store';
+import { AddressPicker, PickedLocation } from './address-picker';
 
 type Section = 'profile' | 'family' | 'addresses' | 'support';
 @Component({
   selector: 'forum-account',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, AddressPicker],
   templateUrl: './account.html',
   styleUrl: './account.scss',
 })
@@ -108,8 +109,13 @@ export class Account {
       const p = this.profileForm;
       await this.store.saveProfile(p.name, p.dob, p.gender, p.phone);
     } else if (section === 'family') await this.store.addFamily(this.familyForm);
-    else if (section === 'addresses') await this.store.addAddress(this.addressForm);
-    else return;
+    else if (section === 'addresses') {
+      // The pin's coordinates travel only as a pair, and only while the address still matches it.
+      const { latitude, longitude, ...address } = this.addressForm;
+      await this.store.addAddress(
+        latitude !== null && longitude !== null ? { ...address, latitude, longitude } : address,
+      );
+    } else return;
     if (this.store.error()) this.saveError.set(this.store.error());
     else if (this.store.signedIn()) {
       this.editing.set(false);
@@ -121,6 +127,21 @@ export class Account {
             : 'Address added.',
       );
     }
+  }
+  /** Fills the address form from a place the customer found; house or flat stays theirs to type. */
+  protected applyLocation(place: PickedLocation): void {
+    const form = this.addressForm;
+    form.street = place.street || form.street;
+    form.area = place.area || form.area;
+    form.pincode = place.pincode;
+    if (place.landmark && !form.landmark) form.landmark = place.landmark;
+    form.latitude = place.latitude;
+    form.longitude = place.longitude;
+  }
+  /** A pincode typed by hand no longer matches the picked pin, so the pin's coordinates are dropped. */
+  protected clearCoordinates(): void {
+    this.addressForm.latitude = null;
+    this.addressForm.longitude = null;
   }
   private emptyFamily() {
     return {
@@ -141,6 +162,8 @@ export class Account {
       pincode: '',
       landmark: '',
       access_notes: '',
+      latitude: null as number | null,
+      longitude: null as number | null,
     };
   }
 }
