@@ -14,6 +14,8 @@ import {
   SlotDay,
   Snapshot,
   itemPrice,
+  WebBanner,
+  readBanners,
 } from './models';
 import { WebsiteClock } from './clock';
 import { previewCatalog } from './preview-catalog';
@@ -47,6 +49,8 @@ export class WebsiteStore {
   readonly preview = computed(() => this.api.config().mode === 'preview');
   readonly items = signal<Item[]>(previewCatalog.items as Item[]);
   readonly categories = signal<Category[]>(previewCatalog.categories);
+  /** The Home banners made in the admin; empty in preview or when they cannot be read. */
+  readonly banners = signal<WebBanner[]>([]);
   readonly lines = signal<Line[]>([]);
   readonly people = signal<Person[]>([]);
   readonly addresses = signal<Address[]>([]);
@@ -154,6 +158,7 @@ export class WebsiteStore {
         throw new WebsiteError('response');
       this.items.set(items);
       this.categories.set(categories);
+      void this.loadBanners();
       try {
         const ids = JSON.parse(sessionStorage.getItem('forum-web-guest') ?? '[]');
         if (Array.isArray(ids) && ids.every((id) => typeof id === 'string')) this.guestIds = ids;
@@ -178,6 +183,22 @@ export class WebsiteStore {
       }
       this.ready.set(true);
     });
+  }
+  /** Banners are decoration: a failure here never blocks the catalogue or shows an error. */
+  async loadBanners(): Promise<void> {
+    if (this.preview()) return;
+    try {
+      const home = await this.api.request<{ banners?: unknown }>(
+        '/home',
+        'GET',
+        undefined,
+        undefined,
+        false,
+      );
+      this.banners.set(readBanners(home?.banners));
+    } catch {
+      this.banners.set([]);
+    }
   }
   private restoreGuestLines(): void {
     this.lines.set(

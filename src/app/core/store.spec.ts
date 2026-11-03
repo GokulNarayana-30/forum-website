@@ -264,4 +264,62 @@ describe('Customer website booking boundaries', () => {
     expect(store.lines()).toEqual([]);
     expect(store.address()).toBeNull();
   });
+  describe('Home banners', () => {
+    const live = () =>
+      api.config.set({
+        mode: 'live',
+        apiBaseUrl: 'https://api.example.invalid/v1',
+        supabaseUrl: 'https://auth.example.invalid',
+        publishableKey: 'sb_publishable_example',
+      });
+    const banner = (extra: Record<string, unknown> = {}) => ({
+      id: 'promo-1',
+      eyebrow: 'Offer',
+      headline: 'A trained phlebotomist comes to you',
+      body: 'Book a home collection.',
+      cta_label: 'Browse tests',
+      target: { kind: 'tests', target_id: null, item: null },
+      web_image_url: 'https://cdn.forumhospital.com/promos/banner-web.webp',
+      ...extra,
+    });
+
+    it('reads them from the public Home feed without signing in', async () => {
+      live();
+      api.request.mockResolvedValue({ banners: [banner()], categories: [] });
+      await store.loadBanners();
+      expect(api.request).toHaveBeenCalledWith('/home', 'GET', undefined, undefined, false);
+      expect(store.banners().map((b) => b.id)).toEqual(['promo-1']);
+    });
+
+    it('keeps only banners it can draw', async () => {
+      live();
+      api.request.mockResolvedValue({ banners: [banner(), banner({ id: 'x', headline: '' })] });
+      await store.loadBanners();
+      expect(store.banners().map((b) => b.id)).toEqual(['promo-1']);
+    });
+
+    it('shows none, quietly, when the Home feed fails', async () => {
+      live();
+      api.request.mockRejectedValue(new WebsiteError('http_503'));
+      await store.loadBanners();
+      expect(store.banners()).toEqual([]);
+      expect(store.error()).toBe('');
+    });
+
+    it('drops banners that were showing when a later read fails', async () => {
+      live();
+      api.request.mockResolvedValueOnce({ banners: [banner()] });
+      await store.loadBanners();
+      expect(store.banners()).toHaveLength(1);
+      api.request.mockRejectedValueOnce(new WebsiteError('network'));
+      await store.loadBanners();
+      expect(store.banners()).toEqual([]);
+    });
+
+    it('makes no request in preview, which has no API', async () => {
+      await store.loadBanners();
+      expect(api.request).not.toHaveBeenCalled();
+      expect(store.banners()).toEqual([]);
+    });
+  });
 });

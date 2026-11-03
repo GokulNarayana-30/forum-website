@@ -4,9 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink, Router } from '@angular/router';
 import { WebsiteStore } from '../core/store';
 import { image, itemImage, money, itemPrice } from '../core/models';
+import { HomeBanners } from './home-banners';
 @Component({
   selector: 'forum-home',
-  imports: [RouterLink, FormsModule],
+  imports: [RouterLink, FormsModule, HomeBanners],
   templateUrl: './home.html',
   styleUrl: './home.scss',
 })
