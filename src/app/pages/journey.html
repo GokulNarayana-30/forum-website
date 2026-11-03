@@ -753,10 +753,19 @@
                   {{ money(order.total_paise) }} · {{ order.payment_status?.replaceAll('_', ' ') }}
                 </p>
               </div>
-              <button class="button outline" [disabled]="store.busy()" (click)="track(order)">
-                View status
+              <button
+                class="button outline"
+                [disabled]="store.busy()"
+                [attr.aria-expanded]="selectedOrder()?.id === order.id"
+                [attr.aria-controls]="'booking-status-' + order.id"
+                (click)="selectedOrder.set(selectedOrder()?.id === order.id ? null : order)"
+              >
+                {{ selectedOrder()?.id === order.id ? 'Hide status' : 'View status' }}
               </button>
             </article>
+            @if (selectedOrder()?.id === order.id) {
+              <forum-booking-status [id]="'booking-status-' + order.id" [order]="order" />
+            }
           } @empty {
             <div class="empty-state">
               <h2>
@@ -769,20 +778,6 @@
             </div>
           }
         </div>
-        @if (selectedOrder(); as order) {
-          <section class="panel">
-            <h2>{{ order.booking_ref }} · Status</h2>
-            <p>{{ order.status.replaceAll('_', ' ') }}</p>
-            @if (tracking(); as tracking) {
-              @for (event of tracking.events ?? []; track $index) {
-                <p>
-                  {{ event.label || event.kind }} · {{ instant(event.occurred_at || event.at) }}
-                </p>
-              }
-            }
-            <a class="text-link" routerLink="/help">Need help with this collection? →</a>
-          </section>
-        }
       }
     }
     @case ('reports') {

@@ -6,9 +6,10 @@ import { Title, Meta } from '@angular/platform-browser';
 import { WebsiteStore } from '../core/store';
 import { Detail, Item, Order, image, instant, itemPrice, money, steps } from '../core/models';
 import { Summary } from './summary';
+import { BookingStatus } from './booking-status';
 @Component({
   selector: 'forum-journey',
-  imports: [FormsModule, RouterLink, Summary],
+  imports: [FormsModule, RouterLink, Summary, BookingStatus],
   templateUrl: './journey.html',
   styleUrl: './journey.scss',
 })
@@ -53,10 +54,6 @@ export class Journey {
   protected addressType = 'home';
   protected landmark = '';
   protected accessNotes = '';
-  protected readonly tracking = signal<{
-    kind?: string;
-    events?: { label?: string; kind?: string; occurred_at?: string; at?: string }[];
-  } | null>(null);
   protected readonly selectedOrder = signal<Order | null>(null);
   protected readonly filtered = computed(() => {
     const search = this.query().trim().toLowerCase();
@@ -119,6 +116,9 @@ export class Journey {
         name: 'robots',
         content: ['tests', 'detail'].includes(view) ? 'index,follow' : 'noindex,nofollow',
       });
+    });
+    effect(() => {
+      if (!this.store.signedIn() || this.view() !== 'bookings') this.selectedOrder.set(null);
     });
   }
   protected contains(item: Item): boolean {
@@ -197,14 +197,5 @@ export class Journey {
   }
   protected saveProfile(): void {
     void this.store.saveProfile(this.name, this.dob, this.gender, this.phone);
-  }
-  protected async track(order: Order): Promise<void> {
-    this.selectedOrder.set(order);
-    this.tracking.set(null);
-    await this.store.run(async () => {
-      this.tracking.set(
-        await this.store.api.request('/orders/' + encodeURIComponent(order.id) + '/tracking'),
-      );
-    });
   }
 }
