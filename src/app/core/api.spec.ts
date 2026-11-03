@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { WebsiteApi } from './api';
+import { WebsiteApi, authCallbackPath } from './api';
 
 describe('Website network boundaries', () => {
   let api: WebsiteApi;
@@ -118,5 +118,16 @@ describe('Website network boundaries', () => {
     const calls = fakeFetch.mock.calls.length;
     await expect(api.request('/reports')).rejects.toMatchObject({ code: 'sign_in' });
     expect(fakeFetch).toHaveBeenCalledTimes(calls);
+  });
+});
+
+describe('Sign-in return address', () => {
+  it('is /auth/callback at a domain root', () => {
+    expect(authCallbackPath('https://example.test/')).toBe('/auth/callback');
+  });
+  it('follows the base path when the site is served from a sub-path', () => {
+    expect(authCallbackPath('https://gokulnarayana-30.github.io/forum-website/')).toBe(
+      '/forum-website/auth/callback',
+    );
   });
 });
