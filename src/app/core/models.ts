@@ -10,6 +10,7 @@ export interface Item {
   mrp_paise: number;
   offer_price_paise?: number | null;
   sample_type?: string | null;
+  image_url?: string | null;
   fasting_required?: boolean | null;
   fasting_hours_min?: number | null;
   fasting_hours_max?: number | null;
@@ -139,5 +140,24 @@ export function itemPrice(item: Item): number {
 }
 export function image(id: string): string {
   return `assets/${id}.webp`;
+}
+const KNOWN_IMAGES = new Set([
+  'cat_diabetes',
+  'cat_fever_infection',
+  'cat_full_body',
+  'cat_heart',
+  'cat_liver_kidney',
+  'cat_thyroid',
+  'cat_vitamins',
+  'cat_womens_health',
+]);
+// Picture for a test or package: the API image if given, a bundled picture for that item,
+// else the picture of its first category, else the generic collection banner.
+export function itemImage(item: Item): string {
+  if (item.image_url) return item.image_url;
+  const own = `assets/${item.id}.webp`;
+  if (!item.id.startsWith('p-') && !item.id.startsWith('t-')) return own;
+  const cat = (item.category_ids?.[0] ?? '').replace(/^cat-/, 'cat_').replace(/-/g, '_');
+  return KNOWN_IMAGES.has(cat) ? `assets/${cat}.webp` : 'assets/banner_home_collection.webp';
 }
 export const steps = ['Patients', 'Address', 'Slot', 'Preparation', 'Coupon', 'Review'];

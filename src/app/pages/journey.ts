@@ -4,7 +4,17 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Title, Meta } from '@angular/platform-browser';
 import { WebsiteStore } from '../core/store';
-import { Detail, Item, Order, image, instant, itemPrice, money, steps } from '../core/models';
+import {
+  Detail,
+  Item,
+  Order,
+  image,
+  itemImage,
+  instant,
+  itemPrice,
+  money,
+  steps,
+} from '../core/models';
 import { Summary } from './summary';
 import { BookingStatus } from './booking-status';
 @Component({
@@ -34,6 +44,7 @@ export class Journey {
   protected readonly money = money;
   protected readonly instant = instant;
   protected readonly image = image;
+  protected readonly itemImage = itemImage;
   protected readonly itemPrice = itemPrice;
   protected readonly steps = steps;
   protected couponCode = '';

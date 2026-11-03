@@ -115,7 +115,7 @@
                   class="product-image"
                   [attr.aria-label]="'View details for ' + item.name"
                   ><img
-                    [src]="image(item.id)"
+                    [src]="itemImage(item)"
                     alt=""
                     width="120"
                     height="110"
@@ -256,7 +256,7 @@
           </section>
           <aside class="detail-purchase">
             <img
-              [src]="image(d.item.id)"
+              [src]="itemImage(d.item)"
               alt=""
               width="220"
               height="200"

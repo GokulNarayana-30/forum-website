@@ -114,6 +114,10 @@ export class WebsiteApi {
   async finishSignIn(): Promise<void> {
     const url = new URL(location.href);
     const code = url.searchParams.get('code');
+    // Supabase reports provider problems in the query or the hash (never contains tokens in these fields).
+    const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
+    const providerError =
+      url.searchParams.get('error_description') ?? hash.get('error_description');
     history.replaceState(null, '', '/auth/callback');
     let stored: { verifier?: string; expiresAt?: number } = {};
     try {
@@ -122,13 +126,26 @@ export class WebsiteApi {
       /* fail closed */
     }
     sessionStorage.removeItem('forum-web-pkce');
-    if (
-      !code ||
-      url.pathname !== '/auth/callback' ||
-      !/^[\w-]{43,128}$/.test(stored.verifier ?? '') ||
-      !(stored.expiresAt! > Date.now())
-    )
-      throw new WebsiteError('sign_in', 'Sign-in expired. Please start again.');
+    const fail = (reason: string, message: string): never => {
+      console.warn('[forum-web] sign-in stopped:', reason);
+      throw new WebsiteError('sign_in', message);
+    };
+    if (providerError)
+      fail('provider_error', 'Google sign-in was refused: ' + providerError.slice(0, 160));
+    if (!code)
+      fail(
+        'no_code',
+        'Sign-in did not return a code. Check the Supabase redirect URL list, then start again.',
+      );
+    if (url.pathname !== '/auth/callback')
+      fail('wrong_path', 'Sign-in expired. Please start again.');
+    if (!/^[\w-]{43,128}$/.test(stored.verifier ?? ''))
+      fail(
+        'no_verifier',
+        'Sign-in started in a different browser tab or address (use the same address, such as 127.0.0.1, for the whole sign-in). Please start again.',
+      );
+    if (!(stored.expiresAt! > Date.now()))
+      fail('verifier_expired', 'Sign-in expired. Please start again.');
     const c = this.config();
     const r = await fetch(c.supabaseUrl + '/auth/v1/token?grant_type=pkce', {
       method: 'POST',
