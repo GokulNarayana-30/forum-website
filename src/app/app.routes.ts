@@ -1,4 +1,5 @@
-import { inject } from '@angular/core';
+import { inject, RESPONSE_INIT } from '@angular/core';
+import { WebsiteError } from './core/api';
 import { WebsiteStore } from './core/store';
 import { Routes, ActivatedRouteSnapshot } from '@angular/router';
 const journey = () => import('./pages/journey').then((m) => m.Journey);
@@ -17,10 +18,19 @@ export const routes: Routes = [
   {
     path: 'tests/:id',
     resolve: {
-      detail: (route: ActivatedRouteSnapshot) =>
-        inject(WebsiteStore)
+      detail: (route: ActivatedRouteSnapshot) => {
+        const response = inject(RESPONSE_INIT, { optional: true });
+        return inject(WebsiteStore)
           .detail(route.paramMap.get('id') ?? '')
-          .catch(() => null),
+          .catch((error: unknown) => {
+            // A test the catalogue does not have is a 404 for search engines. A failed request
+            // (network, server error) is not: the test may exist, so the page keeps its status.
+            const missing =
+              error instanceof WebsiteError && ['not_found', 'http_404'].includes(error.code);
+            if (missing && response) response.status = 404;
+            return null;
+          });
+      },
     },
     loadComponent: journey,
     data: { view: 'detail' },
