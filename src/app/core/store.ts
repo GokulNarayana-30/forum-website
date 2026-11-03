@@ -167,6 +167,14 @@ export class WebsiteStore {
           text_version: 'terms-2026-10-draft',
         });
         await this.loadAccount();
+      } else if (await this.api.restoreSession()) {
+        // A refresh keeps the visitor signed in: bring their account back the same way sign-in does.
+        try {
+          await this.loadAccount();
+        } catch {
+          if (this.api.signedIn())
+            this.message.set('Your account could not be loaded. Refresh the page to try again.');
+        }
       }
       this.ready.set(true);
     });
