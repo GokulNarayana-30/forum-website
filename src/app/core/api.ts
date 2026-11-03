@@ -10,6 +10,15 @@ export class WebsiteError extends Error {
     super(message);
   }
 }
+/**
+ * Where Google sends the visitor back to. It follows the page's <base href>, so it is
+ * /auth/callback at a domain root and /forum-website/auth/callback on GitHub Pages.
+ */
+export function authCallbackPath(
+  baseUri: string = document.querySelector('base')?.href ?? location.origin + '/',
+): string {
+  return new URL('auth/callback', baseUri).pathname;
+}
 @Injectable({ providedIn: 'root' })
 export class WebsiteApi {
   readonly config = signal<Config>(publicConfig);
@@ -105,7 +114,7 @@ export class WebsiteApi {
     const u = new URL(cfg.supabaseUrl + '/auth/v1/authorize');
     u.search = new URLSearchParams({
       provider: 'google',
-      redirect_to: location.origin + '/auth/callback',
+      redirect_to: location.origin + authCallbackPath(),
       code_challenge: challenge,
       code_challenge_method: 's256',
     }).toString();
@@ -118,7 +127,7 @@ export class WebsiteApi {
     const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
     const providerError =
       url.searchParams.get('error_description') ?? hash.get('error_description');
-    history.replaceState(null, '', '/auth/callback');
+    history.replaceState(null, '', authCallbackPath());
     let stored: { verifier?: string; expiresAt?: number } = {};
     try {
       stored = JSON.parse(sessionStorage.getItem('forum-web-pkce') ?? '{}');
@@ -137,7 +146,7 @@ export class WebsiteApi {
         'no_code',
         'Sign-in did not return a code. Check the Supabase redirect URL list, then start again.',
       );
-    if (url.pathname !== '/auth/callback')
+    if (url.pathname !== authCallbackPath())
       fail('wrong_path', 'Sign-in expired. Please start again.');
     if (!/^[\w-]{43,128}$/.test(stored.verifier ?? ''))
       fail(
