@@ -19,6 +19,11 @@ export function authCallbackPath(
 ): string {
   return new URL('auth/callback', baseUri).pathname;
 }
+/** Whether [pathname] is the page Google returns the visitor to, at whatever base path the site is served from. */
+export function isAuthCallback(pathname: string = location.pathname, baseUri?: string): boolean {
+  return pathname === authCallbackPath(baseUri);
+}
+
 @Injectable({ providedIn: 'root' })
 export class WebsiteApi {
   readonly config = signal<Config>(publicConfig);

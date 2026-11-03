@@ -1,6 +1,7 @@
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { afterNextRender, Component, inject, signal, computed } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } from '@angular/router';
+import { isAuthCallback } from './core/api';
 import { WebsiteStore } from './core/store';
 @Component({
   selector: 'app-root',
@@ -29,7 +30,7 @@ export class App {
       }
     });
     afterNextRender(async () => {
-      const callback = location.pathname === '/auth/callback';
+      const callback = isAuthCallback();
       await this.store.initialize(callback);
       if (callback && this.store.signedIn() && this.store.ready())
         await this.router.navigateByUrl('/cart');
