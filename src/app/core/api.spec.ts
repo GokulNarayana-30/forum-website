@@ -74,7 +74,7 @@ describe('Website network boundaries', () => {
     expect(fakeFetch).not.toHaveBeenCalled();
     history.replaceState(null, '', '/');
   });
-  async function finishSignIn() {
+  async function finishSignIn(extra: object = {}) {
     live();
     history.replaceState(null, '', '/auth/callback?code=test-code');
     sessionStorage.setItem(
@@ -83,7 +83,7 @@ describe('Website network boundaries', () => {
     );
     fakeFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ access_token: 'test-access-token', expires_in: 3600 }),
+      json: async () => ({ access_token: 'test-access-token', expires_in: 3600, ...extra }),
     });
     await api.finishSignIn();
   }
@@ -109,6 +109,114 @@ describe('Website network boundaries', () => {
 
     await api.request('/catalog/items', 'GET', undefined, undefined, false);
     expect(fakeFetch.mock.calls[2][1].headers).not.toHaveProperty('Authorization');
+  });
+  // A page refresh drops everything held in memory; the session kept by the tab brings it back.
+  function freshPage() {
+    const page = new WebsiteApi();
+    page.config.set({
+      mode: 'live',
+      apiBaseUrl: 'https://api.example.invalid/v1',
+      supabaseUrl: 'https://auth.example.invalid',
+      publishableKey: 'sb_publishable_example',
+    });
+    return page;
+  }
+  function keepSession(expiresAt: number, refresh = 'refresh-1') {
+    sessionStorage.setItem(
+      'forum-web-session',
+      JSON.stringify({ access: 'old-access', refresh, expiresAt }),
+    );
+  }
+  it('keeps the visitor signed in across a page refresh without calling the network', async () => {
+    await finishSignIn({ refresh_token: 'refresh-1' });
+    expect(fakeFetch).toHaveBeenCalledTimes(1);
+    const page = freshPage();
+    expect(await page.restoreSession()).toBe(true);
+    expect(page.signedIn()).toBe(true);
+    expect(fakeFetch).toHaveBeenCalledTimes(1);
+    fakeFetch.mockResolvedValue({ ok: true, status: 200, json: async () => ({ id: 'u' }) });
+    await page.request('/me');
+    expect(fakeFetch.mock.calls[1][1].headers.Authorization).toBe('Bearer test-access-token');
+  });
+  it('does not keep a session it could not renew later', async () => {
+    await finishSignIn();
+    expect(sessionStorage.getItem('forum-web-session')).toBeNull();
+  });
+  it('renews an expired kept session with its refresh token and stores the new one', async () => {
+    live();
+    keepSession(Date.now() - 1000);
+    fakeFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        access_token: 'new-access',
+        expires_in: 3600,
+        refresh_token: 'refresh-2',
+      }),
+    });
+    const page = freshPage();
+    expect(await page.restoreSession()).toBe(true);
+    expect(fakeFetch.mock.calls[0][0]).toBe(
+      'https://auth.example.invalid/auth/v1/token?grant_type=refresh_token',
+    );
+    expect(JSON.parse(fakeFetch.mock.calls[0][1].body)).toEqual({ refresh_token: 'refresh-1' });
+    expect(JSON.parse(sessionStorage.getItem('forum-web-session')!).refresh).toBe('refresh-2');
+    fakeFetch.mockResolvedValue({ ok: true, status: 200, json: async () => ({}) });
+    await page.request('/me');
+    expect(fakeFetch.mock.calls[1][1].headers.Authorization).toBe('Bearer new-access');
+  });
+  it('renews once when several protected calls start together, because the token is single-use', async () => {
+    live();
+    keepSession(Date.now() - 1000);
+    const page = freshPage();
+    fakeFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        access_token: 'new-access',
+        expires_in: 3600,
+        refresh_token: 'refresh-2',
+      }),
+    });
+    fakeFetch.mockResolvedValue({ ok: true, status: 200, json: async () => ({}) });
+    await Promise.all([page.request('/me'), page.request('/reports'), page.request('/orders')]);
+    const renewals = fakeFetch.mock.calls.filter((c) =>
+      String(c[0]).includes('grant_type=refresh_token'),
+    );
+    expect(renewals).toHaveLength(1);
+  });
+  it('signs the visitor out and forgets the session when the refresh token is refused', async () => {
+    live();
+    keepSession(Date.now() - 1000);
+    fakeFetch.mockResolvedValueOnce({ ok: false, status: 400 });
+    const page = freshPage();
+    expect(await page.restoreSession()).toBe(false);
+    expect(page.signedIn()).toBe(false);
+    expect(sessionStorage.getItem('forum-web-session')).toBeNull();
+    await expect(page.request('/me')).rejects.toMatchObject({ code: 'sign_in' });
+  });
+  it('keeps the kept session when the renewal only failed because the network was down', async () => {
+    live();
+    keepSession(Date.now() - 1000);
+    fakeFetch.mockRejectedValueOnce(new Error('offline'));
+    const page = freshPage();
+    expect(await page.restoreSession()).toBe(false);
+    expect(sessionStorage.getItem('forum-web-session')).not.toBeNull();
+  });
+  it('ignores a damaged kept session instead of failing', async () => {
+    live();
+    sessionStorage.setItem('forum-web-session', '{not json');
+    expect(await freshPage().restoreSession()).toBe(false);
+    expect(sessionStorage.getItem('forum-web-session')).toBeNull();
+    sessionStorage.setItem('forum-web-session', JSON.stringify({ access: 5 }));
+    expect(await freshPage().restoreSession()).toBe(false);
+    expect(sessionStorage.getItem('forum-web-session')).toBeNull();
+    expect(fakeFetch).not.toHaveBeenCalled();
+  });
+  it('erases the kept session on sign-out', async () => {
+    await finishSignIn({ refresh_token: 'refresh-1' });
+    expect(sessionStorage.getItem('forum-web-session')).not.toBeNull();
+    api.clearSession();
+    expect(sessionStorage.getItem('forum-web-session')).toBeNull();
+    expect(await freshPage().restoreSession()).toBe(false);
   });
   it('clears a refused session and blocks further protected calls before the network', async () => {
     await finishSignIn();

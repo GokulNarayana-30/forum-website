@@ -24,6 +24,18 @@ export function isAuthCallback(pathname: string = location.pathname, baseUri?: s
   return pathname === authCallbackPath(baseUri);
 }
 
+// The signed-in session lives in this tab's session storage: it survives a refresh and is erased
+// when the tab or browser closes. It is never written to local storage.
+const SESSION_KEY = 'forum-web-session';
+// A token this close to its end is renewed first, so a request never leaves with one that expires mid-flight.
+const RENEW_MARGIN_MS = 30000;
+
+interface StoredSession {
+  access: string;
+  refresh: string;
+  expiresAt: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class WebsiteApi {
   readonly config = signal<Config>(publicConfig);
@@ -56,9 +68,12 @@ export class WebsiteApi {
     authenticated = true,
   ): Promise<T> {
     if (this.config().mode !== 'live') throw new WebsiteError('preview');
-    if (authenticated && (!this.token || Date.now() >= this.expiresAt)) {
-      this.clearSession();
-      throw new WebsiteError('sign_in', 'Please sign in again to continue.');
+    if (authenticated && (!this.token || Date.now() >= this.expiresAt - RENEW_MARGIN_MS)) {
+      await this.renewFromStore();
+      if (!this.token || Date.now() >= this.expiresAt) {
+        this.clearSession();
+        throw new WebsiteError('sign_in', 'Please sign in again to continue.');
+      }
     }
     const headers: Record<string, string> = {};
     if (body !== undefined) headers['Content-Type'] = 'application/json';
@@ -171,16 +186,114 @@ export class WebsiteApi {
     });
     if (!r.ok)
       throw new WebsiteError('sign_in', 'Sign-in could not be completed. Please try again.');
-    const data = (await r.json()) as { access_token: string; expires_in: number };
+    const data = (await r.json()) as {
+      access_token: string;
+      expires_in: number;
+      refresh_token?: string;
+    };
     if (typeof data.access_token !== 'string' || !Number.isFinite(data.expires_in))
       throw new WebsiteError('sign_in');
-    this.token = data.access_token;
-    this.expiresAt = Date.now() + data.expires_in * 1000;
-    this.signedIn.set(true);
+    this.adopt(data.access_token, data.expires_in, data.refresh_token);
+  }
+  /** Brings a session kept by this tab back after a page refresh. True when the visitor is signed in. */
+  async restoreSession(): Promise<boolean> {
+    if (this.config().mode !== 'live') return false;
+    const stored = this.readStored();
+    if (!stored) return false;
+    if (stored.expiresAt - RENEW_MARGIN_MS > Date.now()) {
+      this.token = stored.access;
+      this.expiresAt = stored.expiresAt;
+      this.signedIn.set(true);
+      return true;
+    }
+    await this.renewFromStore();
+    return this.signedIn();
   }
   clearSession(): void {
     this.token = null;
     this.expiresAt = 0;
     this.signedIn.set(false);
+    try {
+      sessionStorage.removeItem(SESSION_KEY);
+    } catch {
+      /* storage unavailable: nothing was kept */
+    }
+  }
+  private renewing: Promise<void> | null = null;
+  private adopt(access: string, expiresInSeconds: number, refresh?: string): void {
+    this.token = access;
+    this.expiresAt = Date.now() + expiresInSeconds * 1000;
+    this.signedIn.set(true);
+    // Without a refresh token the session cannot be renewed, so it is not kept across a refresh.
+    if (typeof refresh !== 'string' || !refresh) return;
+    const kept: StoredSession = { access, refresh, expiresAt: this.expiresAt };
+    try {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(kept));
+    } catch {
+      /* storage unavailable: the session just lasts until this page closes */
+    }
+  }
+  private readStored(): StoredSession | null {
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if (!raw) return null;
+      const s = JSON.parse(raw) as Partial<StoredSession>;
+      if (
+        typeof s.access === 'string' &&
+        typeof s.refresh === 'string' &&
+        typeof s.expiresAt === 'number'
+      )
+        return s as StoredSession;
+    } catch {
+      /* unreadable: treated as signed out */
+    }
+    try {
+      sessionStorage.removeItem(SESSION_KEY);
+    } catch {
+      /* nothing to clear */
+    }
+    return null;
+  }
+  /** Renews the kept session with its refresh token. One renewal at a time: the token is single-use. */
+  private renewFromStore(): Promise<void> {
+    this.renewing ??= this.renew().finally(() => (this.renewing = null));
+    return this.renewing;
+  }
+  private async renew(): Promise<void> {
+    const stored = this.readStored();
+    if (!stored) return;
+    const c = this.config();
+    let r: Response;
+    try {
+      r = await fetch(c.supabaseUrl + '/auth/v1/token?grant_type=refresh_token', {
+        method: 'POST',
+        headers: { apikey: c.publishableKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: stored.refresh }),
+        credentials: 'omit',
+        cache: 'no-store',
+        referrerPolicy: 'no-referrer',
+        signal: AbortSignal.timeout(20000),
+      });
+    } catch {
+      // Offline or slow: keep the stored session so a later try can still renew it.
+      return;
+    }
+    if (!r.ok) {
+      // Supabase refused the refresh token (used, expired or revoked): the visitor must sign in again.
+      this.clearSession();
+      return;
+    }
+    try {
+      const data = (await r.json()) as {
+        access_token?: string;
+        expires_in?: number;
+        refresh_token?: string;
+      };
+      if (typeof data.access_token !== 'string' || !Number.isFinite(data.expires_in))
+        throw new Error('shape');
+      this.adopt(data.access_token, data.expires_in!, data.refresh_token ?? stored.refresh);
+    } catch {
+      this.clearSession();
+    }
   }
 }
