@@ -1,0 +1,77 @@
+<section class="picker" aria-labelledby="picker-title">
+  <h3 id="picker-title">Find your address</h3>
+  <p class="hint">
+    Search, use your location{{ mapAvailable() ? ' or place the pin on the map' : '' }}. We fill in
+    the street, area and pincode; add your house or flat below.
+  </p>
+  <div class="picker-search">
+    <input
+      type="search"
+      name="placeSearch"
+      [ngModelOptions]="{ standalone: true }"
+      [ngModel]="queryText"
+      (ngModelChange)="onQuery($event)"
+      (keydown.enter)="$event.preventDefault()"
+      placeholder="Search your street, area or landmark"
+      aria-label="Search for your address"
+      autocomplete="off"
+      maxlength="120"
+    />
+    <button type="button" class="button outline" (click)="useMyLocation()" [disabled]="locating()">
+      {{ locating() ? 'Finding you…' : 'Use my location' }}
+    </button>
+  </div>
+  @if (suggestions().length) {
+    <ul class="suggestions">
+      @for (suggestion of suggestions(); track suggestion.place_id) {
+        <li>
+          <button type="button" (click)="choose(suggestion)">
+            <strong>{{ suggestion.title }}</strong
+            ><span>{{ suggestion.subtitle }}</span>
+          </button>
+        </li>
+      }
+    </ul>
+  } @else if (searched()) {
+    <p class="hint">No places found. Check the spelling, or type the address below.</p>
+  }
+  @if (mapAvailable()) {
+    @if (!showMap()) {
+      <button type="button" class="button outline" (click)="openMap()">Pick on the map</button>
+    } @else {
+      <div class="map-frame">
+        <div
+          #mapElement
+          class="map"
+          role="application"
+          aria-label="Map. Zoom in and move the map so the pin sits on your door."
+        ></div>
+        <span class="pin" aria-hidden="true"></span>
+      </div>
+      @if (mapState() === 'loading') {
+        <p class="hint" role="status">Loading the map…</p>
+      } @else if (mapState() === 'ready') {
+        <p class="hint">Zoom in and move the map until the pin sits on your door.</p>
+      }
+    }
+  }
+  @if (notice()) {
+    <p class="notice-box" role="alert">{{ notice() }}</p>
+  }
+  @if (resolving()) {
+    <p class="hint" role="status">Looking up this place…</p>
+  }
+  @if (picked(); as place) {
+    <div class="picked" role="status">
+      <strong>{{ place.formatted_address || place.area + ' ' + place.pincode }}</strong>
+      <span [class.ok]="place.serviceable">{{
+        place.serviceable
+          ? 'We collect samples at this pincode.'
+          : 'We do not collect samples at this pincode yet.'
+      }}</span>
+      @if (place.collection_fee_paise) {
+        <span>Collection fee {{ price(place.collection_fee_paise) }}</span>
+      }
+    </div>
+  }
+</section>

@@ -115,6 +115,8 @@ export interface Config {
   apiBaseUrl: string;
   supabaseUrl: string;
   publishableKey: string;
+  // A Google Maps browser key restricted to this site's address. Empty: no map, search only.
+  mapsApiKey?: string;
 }
 export function money(paise: number): string {
   return new Intl.NumberFormat('en-IN', {
