@@ -509,9 +509,6 @@ forum-summary {
     align-items: start;
     flex-direction: column;
   }
-  :root body .journey .account-grid {
-    grid-template-columns: 1fr;
-  }
   :root body .journey .step-actions .button {
     font-size: 11px;
     gap: 10px;

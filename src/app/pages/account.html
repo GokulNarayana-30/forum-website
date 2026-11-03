@@ -1,0 +1,392 @@
+<div class="account-heading">
+  <div>
+    <p class="eyebrow">YOUR CARE, IN ONE PLACE</p>
+    <h1>My account</h1>
+    <p>Manage the details that make your next collection easier.</p>
+  </div>
+</div>
+@if (!store.signedIn()) {
+  <section class="panel welcome">
+    <span class="avatar" aria-hidden="true">♡</span>
+    <h2>A little more personal.</h2>
+    <p>
+      Sign in to save your details, add family members and keep your collection addresses handy.
+    </p>
+    <a class="button" routerLink="/sign-in">Sign in to your account →</a>
+  </section>
+} @else {
+  <div class="account-layout">
+    <aside>
+      <div class="identity">
+        <span class="avatar" aria-hidden="true">{{ initials() }}</span>
+        <h2>{{ store.profile()?.name || 'Your account' }}</h2>
+        @if (store.profile()?.patient_id; as patientId) {
+          <p>Patient ID · {{ patientId }}</p>
+        }
+        <span class="account-badge">{{
+          store.preview() ? 'Sample account' : 'Forum Labs account'
+        }}</span>
+      </div>
+      <nav class="account-nav" aria-label="Account sections">
+        @for (item of sections; track item.id) {
+          <button
+            type="button"
+            [disabled]="store.busy()"
+            [class.active]="section() === item.id"
+            [attr.aria-current]="section() === item.id ? 'page' : null"
+            (click)="select(item.id)"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path [attr.d]="item.icon" />
+            </svg>
+            <span>{{ item.title }}</span>
+            @if (item.id === 'family') {
+              <small>{{ family().length }}</small>
+            }
+            @if (item.id === 'addresses') {
+              <small>{{ store.addresses().length }}</small>
+            }
+          </button>
+        }
+      </nav>
+      <div class="sidebar-foot">
+        <a routerLink="/bookings">My bookings ↗</a><a routerLink="/reports">My reports ↗</a
+        ><button type="button" [disabled]="store.busy()" (click)="store.signOut()">Sign out</button>
+      </div>
+    </aside>
+    <div class="account-content">
+      @if (store.preview()) {
+        <p class="sample-note">You’re viewing a sample account with fictional details.</p>
+      }
+      @if (saved()) {
+        <p class="notice-box" role="status">{{ saved() }}</p>
+      }
+      <section class="panel account-panel" aria-labelledby="account-section-heading">
+        @for (item of sections; track item.id) {
+          @if (section() === item.id) {
+            <div class="section-heading">
+              <div>
+                <h2 id="account-section-heading">{{ item.title }}</h2>
+                <p>{{ item.hint }}</p>
+              </div>
+              @if (!store.preview() && section() !== 'support' && !editing()) {
+                <button
+                  type="button"
+                  class="button outline small"
+                  [disabled]="!store.canEdit()"
+                  (click)="edit()"
+                >
+                  {{
+                    section() === 'profile'
+                      ? 'Edit details'
+                      : section() === 'family'
+                        ? '+ Add member'
+                        : '+ Add address'
+                  }}
+                </button>
+              }
+            </div>
+          }
+        }
+        @if (editing()) {
+          <form
+            #accountForm="ngForm"
+            (ngSubmit)="save(accountForm)"
+            [attr.aria-busy]="store.busy()"
+          >
+            @switch (section()) {
+              @case ('profile') {
+                <div class="form-grid">
+                  <label
+                    >Full name<input
+                      name="name"
+                      [(ngModel)]="profileForm.name"
+                      required
+                      maxlength="120"
+                      autocomplete="name"
+                  /></label>
+                  <label
+                    >Date of birth<input
+                      name="dob"
+                      type="date"
+                      [(ngModel)]="profileForm.dob"
+                      required
+                      autocomplete="bday"
+                  /></label>
+                  <label
+                    >Gender<select name="gender" [(ngModel)]="profileForm.gender" required>
+                      <option value="">Select gender</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select></label
+                  >
+                  <label
+                    >Mobile number<input
+                      name="phone"
+                      type="tel"
+                      [(ngModel)]="profileForm.phone"
+                      required
+                      pattern="\+91[6-9][0-9]{9}"
+                      placeholder="+91"
+                      autocomplete="tel"
+                    /><small>Include +91 before your 10-digit number.</small></label
+                  >
+                </div>
+              }
+              @case ('family') {
+                <p class="form-intro">
+                  Add someone you book tests for. Their bookings and reports stay separate.
+                </p>
+                <div class="form-grid">
+                  <label
+                    >Full name<input
+                      name="familyName"
+                      [(ngModel)]="familyForm.name"
+                      required
+                      maxlength="120"
+                  /></label>
+                  <label
+                    >Relationship<select name="relation" [(ngModel)]="familyForm.relation">
+                      <option value="spouse">Spouse</option>
+                      <option value="parent">Parent</option>
+                      <option value="child">Child</option>
+                      <option value="sibling">Sibling</option>
+                      <option value="other">Other</option>
+                    </select></label
+                  >
+                  <label
+                    >Date of birth<input
+                      name="familyDob"
+                      [(ngModel)]="familyForm.date_of_birth"
+                      type="date"
+                      required
+                  /></label>
+                  <label
+                    >Gender<select name="familyGender" [(ngModel)]="familyForm.gender" required>
+                      <option value="">Select gender</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select></label
+                  >
+                </div>
+                <label class="check"
+                  ><input
+                    type="checkbox"
+                    name="share"
+                    [(ngModel)]="familyForm.share_consent"
+                    required
+                  /><span>I am authorised to share this person’s details.</span></label
+                >
+                <label class="check"
+                  ><input
+                    type="checkbox"
+                    name="guardian"
+                    [(ngModel)]="familyForm.guardian_confirmed"
+                  /><span
+                    >For a person under 18, I confirm I am their parent or guardian.</span
+                  ></label
+                >
+              }
+              @case ('addresses') {
+                <p class="form-intro">Tell us where to come for your home sample collection.</p>
+                <div class="form-grid">
+                  <label
+                    >Address type<select name="type" [(ngModel)]="addressForm.type">
+                      <option value="home">Home</option>
+                      <option value="work">Work</option>
+                      <option value="other">Other</option>
+                    </select></label
+                  >
+                  <label
+                    >House / flat<input
+                      name="house"
+                      [(ngModel)]="addressForm.house"
+                      required
+                      maxlength="200"
+                      autocomplete="address-line1"
+                  /></label>
+                  <label
+                    >Street<input
+                      name="street"
+                      [(ngModel)]="addressForm.street"
+                      maxlength="200"
+                      autocomplete="address-line2"
+                  /></label>
+                  <label
+                    >Area<input name="area" [(ngModel)]="addressForm.area" required maxlength="120"
+                  /></label>
+                  <label
+                    >Pincode<input
+                      name="pincode"
+                      [(ngModel)]="addressForm.pincode"
+                      required
+                      pattern="[1-9][0-9]{5}"
+                      inputmode="numeric"
+                      maxlength="6"
+                      autocomplete="postal-code"
+                  /></label>
+                  <label
+                    >Landmark <span class="optional">(optional)</span
+                    ><input name="landmark" [(ngModel)]="addressForm.landmark" maxlength="200"
+                  /></label>
+                </div>
+                <label
+                  >Access notes <span class="optional">(optional)</span
+                  ><textarea
+                    name="accessNotes"
+                    [(ngModel)]="addressForm.access_notes"
+                    maxlength="500"
+                    placeholder="Anything that helps us find your door"
+                  ></textarea>
+                </label>
+              }
+            }
+            @if (saveError()) {
+              <p class="notice-box" role="alert">{{ saveError() }}</p>
+            }
+            <div class="form-actions">
+              <button class="button" [disabled]="!store.canEdit() || !accountForm.valid">
+                {{
+                  store.busy()
+                    ? 'Saving…'
+                    : section() === 'profile'
+                      ? 'Save details'
+                      : section() === 'family'
+                        ? 'Save family member'
+                        : 'Save address'
+                }}</button
+              ><button
+                class="button outline"
+                type="button"
+                [disabled]="store.busy()"
+                (click)="editing.set(false)"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        } @else {
+          @switch (section()) {
+            @case ('profile') {
+              <dl class="profile-details">
+                <div>
+                  <dt>Full name</dt>
+                  <dd>{{ store.profile()?.name || 'Not added' }}</dd>
+                </div>
+                <div>
+                  <dt>Mobile number</dt>
+                  <dd>{{ store.profile()?.phone || 'Not added' }}</dd>
+                </div>
+                <div>
+                  <dt>Date of birth</dt>
+                  <dd>{{ birthDate(store.profile()?.date_of_birth) }}</dd>
+                </div>
+                <div>
+                  <dt>Gender</dt>
+                  <dd>{{ label(store.profile()?.gender) }}</dd>
+                </div>
+                <div class="full-row">
+                  <dt>Email address</dt>
+                  <dd>{{ store.profile()?.email || 'Not added' }}</dd>
+                </div>
+              </dl>
+              <div class="care-note">
+                <span aria-hidden="true">♡</span>
+                <p>
+                  Keeping your details up to date helps us arrange the right collection for you.
+                </p>
+              </div>
+            }
+            @case ('family') {
+              <div class="records">
+                @for (person of family(); track person.id) {
+                  <article class="record">
+                    <span class="mini-avatar" aria-hidden="true">{{
+                      (person.name || 'F').charAt(0).toUpperCase()
+                    }}</span>
+                    <div>
+                      <h3>{{ person.name }}</h3>
+                      <p>
+                        {{ label(person.relation) }}
+                        @if (person.gender) {
+                          · {{ label(person.gender) }}
+                        }
+                      </p>
+                      @if (person.date_of_birth) {
+                        <p>Born {{ birthDate(person.date_of_birth) }}</p>
+                      }
+                    </div>
+                  </article>
+                } @empty {
+                  <div class="quiet-empty">
+                    <h3>Care for the people closest to you.</h3>
+                    <p>Add a family member to book tests for them more easily.</p>
+                  </div>
+                }
+              </div>
+              <p class="section-footnote">Each family member has their own booking and report.</p>
+            }
+            @case ('addresses') {
+              <div class="records">
+                @for (address of store.addresses(); track address.id) {
+                  <article class="record address-record">
+                    <span class="mini-avatar" aria-hidden="true">⌂</span>
+                    <div>
+                      <h3>{{ label(address.type) }}</h3>
+                      <p>
+                        {{ address.house }}
+                        @if (address.street) {
+                          , {{ address.street }}
+                        }
+                      </p>
+                      <p>{{ address.area }} · {{ address.pincode }}</p>
+                      @if (address.landmark) {
+                        <p>Near {{ address.landmark }}</p>
+                      }
+                    </div>
+                  </article>
+                } @empty {
+                  <div class="quiet-empty">
+                    <h3>Your doorstep, saved.</h3>
+                    <p>Add an address so you don’t have to enter it with every booking.</p>
+                  </div>
+                }
+              </div>
+              <p class="section-footnote">
+                Collection availability is checked for your pincode during checkout.
+              </p>
+            }
+            @case ('support') {
+              <div class="support-links">
+                <a routerLink="/privacy"
+                  ><strong>Privacy information <span>↗</span></strong>
+                  <p>How your account and health information are handled.</p></a
+                ><a routerLink="/terms"
+                  ><strong>Terms of service <span>↗</span></strong>
+                  <p>Information about bookings and collections.</p></a
+                ><a routerLink="/help"
+                  ><strong>Get help <span>↗</span></strong>
+                  <p>Support for your account or an existing collection.</p></a
+                >
+              </div>
+              <div class="care-note">
+                <span aria-hidden="true">♡</span>
+                <p>Released reports are opened through private, short-lived links.</p>
+              </div>
+            }
+          }
+        }
+      </section>
+    </div>
+  </div>
+}

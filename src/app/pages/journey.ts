@@ -25,9 +25,10 @@ import {
 } from '../core/models';
 import { Summary } from './summary';
 import { BookingStatus } from './booking-status';
+import { Account } from './account';
 @Component({
   selector: 'forum-journey',
-  imports: [FormsModule, RouterLink, Summary, BookingStatus],
+  imports: [FormsModule, RouterLink, Summary, BookingStatus, Account],
   templateUrl: './journey.html',
   styleUrl: './journey.scss',
 })
@@ -58,23 +59,6 @@ export class Journey {
   protected readonly itemPrice = itemPrice;
   protected readonly steps = steps;
   protected couponCode = '';
-  protected name = '';
-  protected dob = '';
-  protected gender = '';
-  protected phone = '';
-  protected familyName = '';
-  protected familyDob = '';
-  protected familyGender = '';
-  protected relation = 'spouse';
-  protected share = false;
-  protected guardian = false;
-  protected house = '';
-  protected street = '';
-  protected area = '';
-  protected pincode = '';
-  protected addressType = 'home';
-  protected landmark = '';
-  protected accessNotes = '';
   protected readonly selectedOrder = signal<Order | null>(null);
   protected readonly filtered = computed(() => {
     const search = this.query().trim().toLowerCase();
@@ -124,13 +108,6 @@ export class Journey {
         if (signed && view === 'reports') void this.store.loadReports();
         if (signed && ['cart', 'checkout'].includes(view))
           void this.store.run(() => this.store.refreshCart());
-        if (view === 'account') {
-          const p = this.store.profile();
-          this.name = p?.name ?? '';
-          this.dob = p?.date_of_birth ?? '';
-          this.gender = p?.gender ?? '';
-          this.phone = p?.phone ?? '';
-        }
       });
     });
     effect(() => {
@@ -195,30 +172,5 @@ export class Journey {
   protected closeFilters(trigger: HTMLButtonElement): void {
     this.filtersOpen.set(false);
     trigger.focus();
-  }
-
-  protected addFamily(): void {
-    void this.store.addFamily({
-      name: this.familyName,
-      relation: this.relation,
-      date_of_birth: this.familyDob,
-      gender: this.familyGender,
-      share_consent: this.share,
-      guardian_confirmed: this.guardian,
-    });
-  }
-  protected addAddress(): void {
-    void this.store.addAddress({
-      type: this.addressType,
-      house: this.house,
-      street: this.street,
-      area: this.area,
-      pincode: this.pincode,
-      landmark: this.landmark,
-      access_notes: this.accessNotes,
-    });
-  }
-  protected saveProfile(): void {
-    void this.store.saveProfile(this.name, this.dob, this.gender, this.phone);
   }
 }
