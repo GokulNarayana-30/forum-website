@@ -23,7 +23,7 @@ npm test -- --watch=false
 - Guest cart, sign-in gate and six checkout steps matching `apps/mobile`: Patients → Address → Slot → Preparation → Coupon → Review.
 - Desktop checkout has a persistent order summary. Phone checkout shows a collapsible summary before the current step, with Back/Continue fixed above the safe area.
 - Phone navigation uses a 60px sticky logo/menu row, with keyboard dismissal and automatic closing after navigation. Home search and horizontally scrolling category shortcuts appear before the shorter hero; the illustration follows featured items. The catalog has compact list cards and an expandable Filter & sort panel. Floating cart appears only with items and is suppressed on Cart/Checkout to keep controls clear.
-- Account profile, adding family members with consent/guardian fields, and adding manual collection addresses.
+- Account has a profile summary and separate Personal details, Family members, Saved addresses and Privacy & help sections. Desktop uses a sidebar; phone navigation keeps all four sections visible. Profile details are read-only until Edit; adding a member/address opens a focused form with Save/Cancel and local feedback. Existing consent/guardian fields and manual collection addresses are retained.
 - My bookings with server tracking events, and released reports with fresh authenticated document-link requests and access auditing.
 - Explicit empty/error/refusal states, terms/privacy information and help page. No online payment: cash or UPI at collection.
 
