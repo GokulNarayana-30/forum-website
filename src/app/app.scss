@@ -1,0 +1,209 @@
+:host {
+  display: block;
+}
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--white);
+  box-shadow: 0 2px 10px #1118270d;
+}
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding-block: 4px;
+}
+/* Display the supplied transparent logo as one wordmark. The original PNG is preserved. */
+.brand {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.brand img {
+  width: 160px;
+  height: 62px;
+  object-fit: cover;
+  object-position: center 45%;
+}
+nav {
+  display: flex;
+  gap: 23px;
+  font-size: 12px;
+}
+nav a {
+  padding: 8px 0;
+}
+nav a:hover,
+nav a.selected {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 7px;
+}
+.count {
+  background: var(--white);
+  color: var(--primary);
+  border-radius: 50%;
+  min-width: 25px;
+  padding-inline: 5px;
+  height: 23px;
+  display: grid;
+  place-items: center;
+}
+.floating-cart {
+  position: fixed;
+  right: max(24px, env(safe-area-inset-right));
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  z-index: 30;
+  gap: 12px;
+  min-height: 58px;
+  padding: 14px 20px;
+  box-shadow: 0 6px 24px #11182726;
+}
+.floating-cart svg {
+  width: 23px;
+  height: 23px;
+  flex-shrink: 0;
+}
+.announcement {
+  text-align: center;
+  background: var(--blush-light);
+  font-size: 11px;
+  color: var(--primary);
+  padding: 5px 18px;
+}
+.preview-banner {
+  text-align: center;
+  padding: 9px 18px;
+  font-size: 11px;
+  background: #eaf3fb;
+  color: var(--ink);
+}
+.feedback {
+  padding: 15px 20px;
+  margin-top: 16px;
+  border: 1px solid var(--outline);
+  border-radius: 12px;
+  font-size: 12px;
+}
+.error {
+  color: #9b2424;
+  border-color: #c53030;
+  background: #fef1f1;
+}
+.working {
+  position: fixed;
+  bottom: calc(100px + env(safe-area-inset-bottom));
+  right: 20px;
+  padding: 10px 18px;
+  border-radius: 24px;
+  background: var(--primary);
+  color: white;
+  font-size: 12px;
+  z-index: 20;
+}
+.footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 25px;
+  font-size: 10px;
+  color: var(--body);
+  padding-block: 45px calc(110px + env(safe-area-inset-bottom));
+}
+.footer strong,
+.footer a {
+  color: var(--primary);
+}
+.footer p {
+  margin-top: 7px;
+}
+.skip {
+  position: absolute;
+  top: -100px;
+  left: 16px;
+  z-index: 100;
+  background: white;
+  padding: 15px;
+}
+.skip:focus {
+  top: 15px;
+}
+
+.menu-toggle,
+.mobile-preview {
+  display: none;
+}
+@media (max-width: 800px) {
+  .header {
+    position: relative;
+    gap: 12px;
+    padding-block: 3px;
+    min-height: 60px;
+  }
+  .brand img {
+    width: 140px;
+    height: 54px;
+  }
+  .menu-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 8px 12px;
+    border: 1px solid var(--outline);
+    border-radius: 12px;
+    background: var(--white);
+    color: var(--primary);
+    font: inherit;
+    font-size: 12px;
+  }
+  .menu-toggle svg {
+    width: 20px;
+    height: 20px;
+  }
+  nav {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    padding: 12px;
+    flex-direction: column;
+    gap: 2px;
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 0 0 16px 16px;
+    box-shadow: 0 10px 20px #11182714;
+  }
+  nav.menu-open {
+    display: flex;
+  }
+  nav a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+  .announcement,
+  .desktop-preview {
+    display: none;
+  }
+  .mobile-preview {
+    display: inline;
+  }
+  .preview-banner {
+    font-size: 10px;
+    padding-block: 5px;
+  }
+  .footer {
+    flex-wrap: wrap;
+  }
+  .floating-cart {
+    right: max(16px, env(safe-area-inset-right));
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    min-height: 54px;
+    padding: 12px 17px;
+  }
+}

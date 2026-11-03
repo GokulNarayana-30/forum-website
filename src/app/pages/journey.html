@@ -1,0 +1,1103 @@
+<main
+  id="main"
+  class="shell journey"
+  [class.catalog-page]="view() === 'tests'"
+  [class.checkout-page]="view() === 'checkout'"
+>
+  <div class="breadcrumbs">
+    <a routerLink="/">Home</a><span aria-hidden="true">/</span
+    ><span>{{
+      view() === 'detail' ? 'Test details' : view() === 'sign-in' ? 'Sign in' : view()
+    }}</span>
+  </div>
+  @switch (view()) {
+    @case ('tests') {
+      <p class="eyebrow">A SMALL STEP FOR YOUR HEALTH</p>
+      <h1>Find the care you’re looking for.</h1>
+      <p class="lead">Explore tests and health packages. Choose for yourself or your family.</p>
+      <div class="catalog-controls">
+        <label class="search wide"
+          ><span class="sr-only">Search tests and packages</span
+          ><input
+            type="search"
+            placeholder="Search tests, packages or test codes"
+            [ngModel]="query()"
+            (ngModelChange)="query.set($event)"
+        /></label>
+        <label class="desktop-sort"
+          >Sort by<select [ngModel]="sort()" (ngModelChange)="sort.set($event)">
+            <option value="popular">Catalog order</option>
+            <option value="price-low">Price: low to high</option>
+            <option value="price-high">Price: high to low</option>
+          </select></label
+        >
+        <button
+          #filterToggle
+          class="mobile-filters-toggle button outline"
+          aria-controls="catalog-filter-panel"
+          [attr.aria-expanded]="filtersOpen()"
+          (click)="filtersOpen.set(!filtersOpen())"
+        >
+          Filter & sort
+          @if (activeFilters()) {
+            <span>({{ activeFilters() }})</span>
+          }
+        </button>
+      </div>
+      <div class="browse-layout">
+        <aside class="browse-sidebar">
+          <h2>Browse by category</h2>
+          <div class="category-list" role="group" aria-label="Browse test categories">
+            <button
+              [class.chosen]="!category()"
+              [attr.aria-pressed]="!category()"
+              (click)="category.set('')"
+            >
+              All categories
+            </button>
+            @for (c of store.categories(); track c.id) {
+              <button
+                [class.chosen]="category() === c.id"
+                [attr.aria-pressed]="category() === c.id"
+                (click)="category.set(c.id)"
+              >
+                {{ c.name }}
+              </button>
+            }
+          </div>
+          <div class="additional-filters" id="catalog-filter-panel" [class.is-open]="filtersOpen()">
+            <label class="mobile-sort"
+              >Sort by<select [ngModel]="sort()" (ngModelChange)="sort.set($event)">
+                <option value="popular">Catalog order</option>
+                <option value="price-low">Price: low to high</option>
+                <option value="price-high">Price: high to low</option>
+              </select></label
+            >
+            <label
+              >Show<select [ngModel]="kind()" (ngModelChange)="kind.set($event)">
+                <option value="">Tests & packages</option>
+                <option value="test">Tests only</option>
+                <option value="package">Packages only</option>
+              </select></label
+            >
+            <label
+              >Preparation<select [ngModel]="fasting()" (ngModelChange)="fasting.set($event)">
+                <option value="">Any preparation</option>
+                <option value="yes">Fasting required</option>
+                <option value="no">No fasting</option>
+              </select></label
+            >
+            <button
+              class="text-link"
+              (click)="
+                category.set(''); query.set(''); kind.set(''); fasting.set(''); sort.set('popular')
+              "
+            >
+              Clear filters
+            </button>
+            <button class="button mobile-filter-done" (click)="closeFilters(filterToggle)">
+              Show {{ filtered().length }} {{ filtered().length === 1 ? 'result' : 'results' }}
+            </button>
+          </div>
+        </aside>
+        <section aria-label="Test results">
+          <p class="results-count" role="status">
+            {{ filtered().length }} {{ filtered().length === 1 ? 'result' : 'results' }}
+            @if (store.preview()) {
+              · Sample catalog
+            }
+          </p>
+          <div class="product-grid">
+            @for (item of filtered(); track item.id) {
+              <article class="product-card">
+                <a
+                  [routerLink]="['/tests', item.id]"
+                  class="product-image"
+                  [attr.aria-label]="'View details for ' + item.name"
+                  ><img
+                    [src]="itemImage(item)"
+                    alt=""
+                    width="120"
+                    height="110"
+                    loading="lazy"
+                    (error)="$any($event.target).style.visibility = 'hidden'"
+                  /><span>{{ item.kind === 'package' ? 'HEALTH PACKAGE' : 'LAB TEST' }}</span></a
+                >
+                <div class="product-content">
+                  <p class="eyebrow">{{ categoryName(item.category_ids[0]) }}</p>
+                  <a [routerLink]="['/tests', item.id]"
+                    ><h2>{{ item.name }}</h2></a
+                  >
+                  <p class="hint">
+                    {{ item.sample_type || 'Sample type confirmed when booking' }}
+                    @if (item.parameter_count) {
+                      · {{ item.parameter_count }}
+                      {{ item.parameter_count === 1 ? 'parameter' : 'parameters' }}
+                    }
+                  </p>
+                  <p class="hint">
+                    {{
+                      item.fasting_required === null
+                        ? 'Preparation to be confirmed'
+                        : item.fasting_required
+                          ? 'Fasting required'
+                          : 'No fasting required'
+                    }}
+                  </p>
+                  <div class="product-bottom">
+                    <div>
+                      <strong>{{ money(itemPrice(item)) }}</strong>
+                      @if (
+                        item.offer_price_paise != null && item.offer_price_paise < item.mrp_paise
+                      ) {
+                        <s>{{ money(item.mrp_paise) }}</s>
+                      }
+                    </div>
+                    <button
+                      class="button outline compact"
+                      [disabled]="!store.canEdit() || contains(item) || !store.ready()"
+                      (click)="store.add(item)"
+                    >
+                      {{ contains(item) ? 'Added ✓' : '+ Add' }}
+                    </button>
+                  </div>
+                </div>
+              </article>
+            } @empty {
+              <div class="empty-state">
+                <h2>No tests match these filters.</h2>
+                <p>Try another name or clear the filters.</p>
+                <button
+                  class="button outline"
+                  (click)="category.set(''); query.set(''); kind.set(''); fasting.set('')"
+                >
+                  Clear filters
+                </button>
+              </div>
+            }
+          </div>
+        </section>
+      </div>
+    }
+    @case ('detail') {
+      @if (detail(); as d) {
+        <div class="detail-layout">
+          <section>
+            <p class="eyebrow">{{ d.item.kind === 'package' ? 'HEALTH PACKAGE' : 'LAB TEST' }}</p>
+            <h1>{{ d.item.name }}</h1>
+            <p class="lead">{{ d.description }}</p>
+            <div class="facts">
+              <div>
+                <span>Sample</span><strong>{{ d.item.sample_type || 'To be confirmed' }}</strong>
+              </div>
+              <div>
+                <span>Preparation</span
+                ><strong>{{
+                  d.item.fasting_required == null
+                    ? 'To be confirmed'
+                    : d.item.fasting_required
+                      ? 'Fasting required'
+                      : 'No fasting'
+                }}</strong>
+              </div>
+              <div>
+                <span>Report time</span
+                ><strong>{{
+                  d.item.report_tat_hours ? d.item.report_tat_hours + ' hours' : 'To be confirmed'
+                }}</strong>
+              </div>
+            </div>
+            <section class="content-block">
+              <h2>Before collection</h2>
+              @for (instruction of d.preparation; track instruction) {
+                <p>{{ instruction }}</p>
+              } @empty {
+                <p>Preparation is confirmed when you book. Check with the lab before collection.</p>
+              }
+              <p class="hint">
+                Do not change prescribed medicines without advice from your clinician.
+              </p>
+            </section>
+            @if (d.inclusions.length) {
+              <section class="content-block">
+                <h2>What’s included</h2>
+                @for (inclusion of d.inclusions; track $index) {
+                  <p>{{ inclusion.name }}</p>
+                }
+              </section>
+            }
+            @if (d.parameters.length) {
+              <section class="content-block">
+                <h2>Parameters</h2>
+                <ul>
+                  @for (parameter of d.parameters; track $index) {
+                    <li>{{ parameter.name }}</li>
+                  }
+                </ul>
+              </section>
+            }
+            @if (d.item.eligibility; as e) {
+              <section class="content-block">
+                <h2>Who can book</h2>
+                <p>
+                  Gender: {{ e.gender || 'All' }} · Minimum age:
+                  {{ e.min_age_years ?? 'No minimum' }} · Maximum age:
+                  {{ e.max_age_years ?? 'No maximum' }}
+                </p>
+                <p class="hint">Eligibility is checked for the selected patient before booking.</p>
+              </section>
+            }
+            @for (faq of d.faqs; track $index) {
+              <details>
+                <summary>{{ faq.question }}</summary>
+                <p>{{ faq.answer }}</p>
+              </details>
+            }
+          </section>
+          <aside class="detail-purchase">
+            <img
+              [src]="itemImage(d.item)"
+              alt=""
+              width="220"
+              height="200"
+              (error)="$any($event.target).style.visibility = 'hidden'"
+            />
+            <h2>{{ money(itemPrice(d.item)) }}</h2>
+            @if (store.preview()) {
+              <p class="hint">Sample price · Preview catalog</p>
+            }
+            <button
+              class="button"
+              [disabled]="!store.canEdit() || contains(d.item)"
+              (click)="store.add(d.item)"
+            >
+              {{ contains(d.item) ? 'Added to cart ✓' : 'Add to cart' }}</button
+            ><a class="text-link" routerLink="/cart">View your cart →</a>
+            <p class="hint">Pay by cash or UPI at collection.</p>
+          </aside>
+        </div>
+      } @else {
+        <div class="empty-state">
+          <h1>{{ detailLoading() ? 'Loading test details…' : 'Test unavailable' }}</h1>
+          <button class="button outline" (click)="loadDetail()">Try again</button
+          ><a class="text-link" routerLink="/tests">Browse all tests</a>
+        </div>
+      }
+    }
+    @case ('cart') {
+      <p class="eyebrow">YOUR FIRST STEP</p>
+      <h1>Your cart.</h1>
+      <p class="lead">Check your selection before arranging home collection.</p>
+      @if (store.lines().length) {
+        <div class="checkout-layout">
+          <section>
+            <div class="panel">
+              <h2>
+                Tests & packages <span class="hint">{{ store.lines().length }} selected</span>
+              </h2>
+              @for (line of store.lines(); track line.id) {
+                <article class="cart-line">
+                  <div>
+                    <a [routerLink]="['/tests', line.item_id]"
+                      ><h3>{{ line.item_name }}</h3></a
+                    >
+                    <p class="hint">
+                      {{ line.kind === 'package' ? 'Health package' : 'Lab test' }} ·
+                      {{ money(line.price_paise) }}
+                    </p>
+                  </div>
+                  <button
+                    class="text-link"
+                    [disabled]="!store.canEdit()"
+                    (click)="store.remove(line)"
+                  >
+                    Remove
+                  </button>
+                </article>
+              }
+            </div>
+            <div class="panel subtle">
+              <h3>Booking for your family?</h3>
+              <p>
+                Assign each test to the right person in the Patients step. Each patient receives
+                their own booking and report.
+              </p>
+            </div>
+            <div class="actions">
+              <button
+                class="button"
+                [disabled]="store.busy() || !store.ready()"
+                (click)="checkout()"
+              >
+                {{ store.signedIn() ? 'Continue to patients' : 'Sign in & continue' }} →</button
+              ><a class="text-link" routerLink="/tests">Add more tests</a>
+            </div>
+          </section>
+          <forum-summary />
+        </div>
+      } @else {
+        <div class="empty-state">
+          <span class="empty-symbol" aria-hidden="true">＋</span>
+          <h2>A little care starts here.</h2>
+          <p>Your cart is empty. Explore tests and packages to get started.</p>
+          <a class="button" routerLink="/tests">Explore tests →</a>
+        </div>
+      }
+    }
+    @case ('sign-in') {
+      <section class="signin panel">
+        <p class="eyebrow">WELCOME TO FORUM LABS</p>
+        <h1>Your care, in one place.</h1>
+        <p class="lead">
+          Sign in to book a collection, manage family members and access released reports.
+        </p>
+        @if (store.preview()) {
+          <div class="subtle panel">
+            <strong>Explore with a sample account</strong>
+            <p>
+              Preview uses fictional people and an example address. No Google account or personal
+              details are needed.
+            </p>
+          </div>
+        }
+        <label class="check"
+          ><input
+            type="checkbox"
+            [ngModel]="store.terms()"
+            (ngModelChange)="store.terms.set($event)"
+          /><span
+            >I accept the <a routerLink="/terms">terms</a> and acknowledge the
+            <a routerLink="/privacy">privacy notice</a>.</span
+          ></label
+        ><button class="button full" [disabled]="store.busy() || !store.ready()" (click)="signIn()">
+          {{ store.preview() ? 'Continue with sample account' : 'Continue with Google' }} →</button
+        ><a class="text-link" routerLink="/tests">Continue browsing as a guest</a>
+      </section>
+    }
+    @case ('callback') {
+      <div class="empty-state">
+        <h1>{{ store.signedIn() ? 'You’re signed in.' : 'Completing sign-in…' }}</h1>
+        <p>Your sign-in details are checked securely.</p>
+        <a routerLink="/sign-in" class="text-link">Start sign-in again</a>
+      </div>
+    }
+    @case ('checkout') {
+      @if (!store.signedIn()) {
+        <div class="empty-state">
+          <h1>Let’s keep your care secure.</h1>
+          <p>Sign in before choosing patients and a collection address.</p>
+          <a class="button" routerLink="/sign-in">Continue to sign-in →</a>
+        </div>
+      } @else if (!store.lines().length && !store.attempt()) {
+        <div class="empty-state">
+          <h1>Your cart is empty.</h1>
+          <a class="button" routerLink="/tests">Explore tests</a>
+        </div>
+      } @else {
+        <p class="eyebrow">HOME SAMPLE COLLECTION</p>
+        <h1>Let’s arrange your collection.</h1>
+        <ol class="progress" aria-label="Checkout progress">
+          @for (label of steps; track label; let i = $index) {
+            <li
+              [class.current]="store.step() === i"
+              [class.done]="store.step() > i"
+              [attr.aria-current]="store.step() === i ? 'step' : null"
+            >
+              <span>{{ store.step() > i ? '✓' : i + 1 }}</span
+              >{{ label }}
+            </li>
+          }
+        </ol>
+        @if (store.attempt()) {
+          <div class="panel pending">
+            <h2>Let’s check your booking first.</h2>
+            <p>
+              Your previous request needs confirmation. Your selection is locked while we safely
+              retry the same booking.
+            </p>
+            <button class="button" [disabled]="store.busy()" (click)="place()">
+              Check booking & retry safely
+            </button>
+          </div>
+        }
+        <div class="checkout-layout">
+          <section class="panel">
+            <p class="eyebrow">STEP {{ store.step() + 1 }} OF 6</p>
+            <h2 id="checkout-step-heading" tabindex="-1">{{ steps[store.step()] }}</h2>
+            @switch (store.step()) {
+              @case (0) {
+                <p class="lead small-lead">Who are these tests for?</p>
+                @for (line of store.lines(); track line.id) {
+                  <div class="patient-line">
+                    <h3>{{ line.item_name }}</h3>
+                    <label
+                      >Patient<select
+                        [disabled]="!store.canEdit()"
+                        [ngModel]="line.person_id"
+                        (ngModelChange)="store.assign(line, $event)"
+                      >
+                        @for (person of store.people(); track person.id) {
+                          <option [value]="person.id">
+                            {{ person.name || 'Me' }} ({{ person.relation }})
+                          </option>
+                        }
+                      </select></label
+                    >
+                  </div>
+                }
+                @for (issue of store.snapshot()?.issues ?? []; track $index) {
+                  <p class="inline-error">
+                    This cart needs attention: {{ issue.kind.replaceAll('_', ' ') }}. Complete
+                    patient details in Account or change the selection.
+                  </p>
+                }
+                <a class="text-link" routerLink="/account">Manage patient details & family →</a>
+              }
+              @case (1) {
+                <p class="lead small-lead">Where should we collect?</p>
+                <div class="address-list">
+                  @for (address of store.addresses(); track address.id) {
+                    <button
+                      class="choice"
+                      [class.chosen]="store.address()?.id === address.id"
+                      [disabled]="!store.canEdit()"
+                      [attr.aria-pressed]="store.address()?.id === address.id"
+                      (click)="store.chooseAddress(address.id)"
+                    >
+                      <strong>{{ address.type }}</strong
+                      ><span>{{ address.house }}, {{ address.street }} {{ address.area }}</span
+                      ><span>{{ address.pincode }}</span>
+                    </button>
+                  } @empty {
+                    <p>No saved addresses yet. Add an address in Account.</p>
+                  }
+                </div>
+                <p class="hint">Changing the address clears the previous collection slot.</p>
+                <a class="text-link" routerLink="/account">Manage saved addresses →</a>
+              }
+              @case (2) {
+                <p class="lead small-lead">Choose a collection time.</p>
+                @if (store.preview()) {
+                  <p class="notice-box">These are fixed example slots, not real availability.</p>
+                }
+                @if (!store.address()) {
+                  <p>Choose a collection address in the previous step first.</p>
+                }
+                @for (day of store.days(); track day.day_key) {
+                  <h3 class="slot-day">{{ day.day_key }}</h3>
+                  <div class="slot-list">
+                    @for (slot of day.slots; track slot.id) {
+                      <button
+                        class="choice"
+                        [disabled]="!store.canEdit() || slot.capacity_left < 1"
+                        [class.chosen]="store.slot()?.id === slot.id"
+                        [attr.aria-pressed]="store.slot()?.id === slot.id"
+                        (click)="store.chooseSlot(slot)"
+                      >
+                        <strong>{{ instant(slot.starts_at) }}</strong
+                        ><span>Until {{ instant(slot.ends_at) }}</span
+                        ><span>{{
+                          slot.capacity_left < 1
+                            ? 'Full'
+                            : slot.capacity_left === 1
+                              ? '1 place left'
+                              : 'Available'
+                        }}</span>
+                        @if (slot.best_for_fasting) {
+                          <span>Best for fasting tests</span>
+                        }
+                      </button>
+                    }
+                  </div>
+                } @empty {
+                  <p>
+                    No collection times are available for this address. Choose another address or
+                    try again later.
+                  </p>
+                }
+                @if (store.slot()) {
+                  <p class="hint">
+                    {{
+                      store.preview()
+                        ? 'Sample slot selected.'
+                        : 'Your slot is temporarily held. If it expires, choose a slot again.'
+                    }}
+                  </p>
+                }
+              }
+              @case (3) {
+                <p class="lead small-lead">A little preparation helps.</p>
+                @if (store.preview()) {
+                  <p>
+                    Preparation in this preview is not confirmed medical advice. Live instructions
+                    will be combined by the server for your selected tests.
+                  </p>
+                } @else {
+                  @for (
+                    instruction of store.snapshot()?.preparation?.instructions ?? [];
+                    track instruction
+                  ) {
+                    <p class="preparation-item">{{ instruction }}</p>
+                  }
+                  @if (store.snapshot()?.preparation?.confirmation_pending) {
+                    <p>
+                      Some preparation instructions need confirmation from the lab when you book.
+                    </p>
+                  }
+                }
+                <p class="notice-box">
+                  Confirm fasting instructions with the lab. Do not change prescribed medicines
+                  without your clinician’s advice.
+                </p>
+                <label class="check"
+                  ><input
+                    type="checkbox"
+                    [disabled]="!store.canEdit()"
+                    [ngModel]="store.preparationRead()"
+                    (ngModelChange)="store.preparationRead.set($event)"
+                  /><span>I have read the preparation information.</span></label
+                >
+              }
+              @case (4) {
+                <p class="lead small-lead">Have a coupon?</p>
+                <p>Apply a coupon or continue without one.</p>
+                <form class="coupon-form" (ngSubmit)="store.coupon(couponCode)">
+                  <label
+                    >Coupon code<input
+                      name="coupon"
+                      [(ngModel)]="couponCode"
+                      placeholder="Enter code"
+                      maxlength="64" /></label
+                  ><button
+                    class="button outline"
+                    [disabled]="!store.canEdit() || !couponCode.trim()"
+                  >
+                    Apply
+                  </button>
+                </form>
+                @if (store.quote()?.applied_coupon; as coupon) {
+                  <div class="notice-box">
+                    {{ coupon.code }} applied · {{ money(coupon.saving_paise) }} saving
+                    <button
+                      class="text-link"
+                      [disabled]="!store.canEdit()"
+                      (click)="store.coupon('')"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                }
+                <p class="hint">Coupon conditions and discounts are checked by the server.</p>
+              }
+              @case (5) {
+                <p class="lead small-lead">One last look.</p>
+                <div class="review-block">
+                  <h3>Patients & tests</h3>
+                  @for (line of store.lines(); track line.id) {
+                    <p>
+                      {{ line.item_name }} —
+                      @for (person of store.people(); track person.id) {
+                        @if (person.id === line.person_id) {
+                          <strong>{{ person.name || 'Me' }}</strong>
+                        }
+                      }
+                    </p>
+                  }
+                </div>
+                <div class="review-block">
+                  <h3>Collection address</h3>
+                  <p>
+                    {{ store.address()?.house }}, {{ store.address()?.area }} ·
+                    {{ store.address()?.pincode }}
+                  </p>
+                </div>
+                <div class="review-block">
+                  <h3>Collection time</h3>
+                  <p>{{ instant(store.slot()?.starts_at) }}</p>
+                </div>
+                <div class="review-block">
+                  <h3>Payment & cancellation</h3>
+                  <p>Pay by cash or UPI to the phlebotomist at collection.</p>
+                  <p>
+                    {{
+                      store.preview()
+                        ? 'Cancellation and rescheduling rules are confirmed by Forum for live bookings.'
+                        : store.policy()
+                    }}
+                  </p>
+                </div>
+                @if (store.priceChanged()) {
+                  <div class="notice-box">
+                    <p>Your total has changed. Review the summary and accept it before booking.</p>
+                    <button
+                      class="button outline"
+                      [disabled]="store.busy()"
+                      (click)="store.acceptPrice()"
+                    >
+                      Accept updated total
+                    </button>
+                  </div>
+                }
+                <label class="check"
+                  ><input
+                    type="checkbox"
+                    [disabled]="!store.canEdit()"
+                    [ngModel]="store.consent()"
+                    (ngModelChange)="store.setConsent($event)"
+                  /><span
+                    >I consent to the selected diagnostic tests and home sample collection for the
+                    listed patients, and confirm I am authorised to book for them. I have read the
+                    preparation information and <a routerLink="/privacy">privacy notice</a>.</span
+                  ></label
+                >
+                <p class="hint">
+                  Marketing consent is optional and is not requested with this booking.
+                </p>
+              }
+            }
+            <div class="actions step-actions">
+              <button
+                class="button outline"
+                [disabled]="!store.canEdit() || store.step() === 0"
+                (click)="back()"
+              >
+                ← Back
+              </button>
+              @if (store.step() < 5) {
+                <button class="button" [disabled]="!store.canEdit()" (click)="next()">
+                  Continue →
+                </button>
+              } @else {
+                <button
+                  class="button"
+                  [disabled]="
+                    store.busy() || !store.consent() || store.priceChanged() || !!store.attempt()
+                  "
+                  (click)="place()"
+                >
+                  {{ store.preview() ? 'Finish preview' : 'Confirm booking · Pay at collection' }}
+                </button>
+              }
+            </div>
+          </section>
+          <forum-summary />
+        </div>
+      }
+    }
+    @case ('confirmation') {
+      @if (store.previewComplete()) {
+        <section class="empty-state">
+          <span class="empty-symbol" aria-hidden="true">✓</span>
+          <p class="eyebrow">PREVIEW COMPLETE</p>
+          <h1>That’s the booking journey.</h1>
+          <p>
+            No booking was created and no payment is due. In live mode, confirmation appears only
+            after Forum’s server accepts your booking.
+          </p>
+          <a class="button" routerLink="/tests">Explore more tests</a
+          ><a class="text-link" routerLink="/checkout">Back to your sample selection</a>
+        </section>
+      } @else if (store.confirmed(); as order) {
+        <section class="panel confirmation">
+          <p class="eyebrow">BOOKING CONFIRMED</p>
+          <h1>Your collection is booked.</h1>
+          <p class="booking-ref">{{ order.booking_ref }}</p>
+          <p>{{ instant(order.slot_starts_at) }}</p>
+          <p>
+            Pay at collection: <strong>{{ money(order.total_paise) }}</strong>
+          </p>
+          <p>
+            Keep your preparation instructions handy. Each patient’s booking and report are managed
+            separately.
+          </p>
+          <a class="button" routerLink="/bookings">View my bookings →</a>
+        </section>
+      } @else {
+        <div class="empty-state">
+          <h1>Check your booking status.</h1>
+          <p>
+            There is no new confirmation on this page. Sign in and open My bookings to check an
+            existing booking.
+          </p>
+          <a class="button" routerLink="/bookings">My bookings</a>
+        </div>
+      }
+    }
+    @case ('bookings') {
+      <p class="eyebrow">YOUR COLLECTIONS</p>
+      <h1>My bookings.</h1>
+      <p class="lead">Keep track of your home collections.</p>
+      @if (!store.signedIn()) {
+        <div class="empty-state">
+          <h2>Your bookings stay private.</h2>
+          <p>Sign in to view your bookings.</p>
+          <a class="button" routerLink="/sign-in">Sign in →</a>
+        </div>
+      } @else {
+        <button class="text-link" [disabled]="store.busy()" (click)="store.loadOrders()">
+          Refresh bookings ↻
+        </button>
+        <div class="bookings-list">
+          @for (order of store.orders(); track order.id) {
+            <article class="panel booking-card">
+              <div>
+                <span class="status">{{ order.status.replaceAll('_', ' ') }}</span>
+                <h2>{{ order.booking_ref }}</h2>
+                <p>{{ instant(order.slot_starts_at) }}</p>
+                <p>
+                  @for (patient of order.patients; track $index) {
+                    <span>{{ patient.first_name }} </span>
+                  }
+                </p>
+                <p>
+                  {{ money(order.total_paise) }} · {{ order.payment_status?.replaceAll('_', ' ') }}
+                </p>
+              </div>
+              <button
+                class="button outline"
+                [disabled]="store.busy()"
+                [attr.aria-expanded]="selectedOrder()?.id === order.id"
+                [attr.aria-controls]="'booking-status-' + order.id"
+                (click)="selectedOrder.set(selectedOrder()?.id === order.id ? null : order)"
+              >
+                {{ selectedOrder()?.id === order.id ? 'Hide status' : 'View status' }}
+              </button>
+            </article>
+            @if (selectedOrder()?.id === order.id) {
+              <forum-booking-status [id]="'booking-status-' + order.id" [order]="order" />
+            }
+          } @empty {
+            <div class="empty-state">
+              <h2>
+                {{
+                  store.preview() ? 'No real bookings in preview mode.' : 'No bookings to show yet.'
+                }}
+              </h2>
+              <p>Once you book, your collection details will appear here.</p>
+              <a class="button" routerLink="/tests">Explore tests</a>
+            </div>
+          }
+        </div>
+      }
+    }
+    @case ('reports') {
+      <p class="eyebrow">YOUR HEALTH RECORDS</p>
+      <h1>Reports, kept private.</h1>
+      <p class="lead">
+        Released reports are available after sign-in. Discuss results with your clinician.
+      </p>
+      @if (store.documentLink(); as link) {
+        <div class="notice-box">
+          <p>Your short-lived report link is ready.</p>
+          <a
+            class="button outline"
+            [href]="link.url"
+            target="_blank"
+            rel="noopener noreferrer"
+            (click)="store.checkDocument($event)"
+            >View PDF now ↗</a
+          >
+        </div>
+      }
+      @if (!store.signedIn()) {
+        <div class="empty-state">
+          <h2>Sign in to access your reports.</h2>
+          <a class="button" routerLink="/sign-in">Sign in →</a>
+        </div>
+      } @else {
+        <button class="text-link" [disabled]="store.busy()" (click)="store.loadReports()">
+          Refresh reports ↻
+        </button>
+        @for (report of store.reports(); track report.id) {
+          <article class="panel booking-card">
+            <div>
+              <span class="status">{{ report.status }}</span>
+              <h2>{{ report.test_name }}</h2>
+              <p>{{ report.patient_first_name }} · Version {{ report.version }}</p>
+              <p>{{ instant(report.released_at) }}</p>
+            </div>
+            @if (report.status === 'ready' || report.status === 'revised') {
+              <button
+                class="button outline"
+                [disabled]="store.busy()"
+                (click)="store.openReport(report)"
+              >
+                Open secure report ↗
+              </button>
+            } @else {
+              <p>Report is not released yet.</p>
+            }
+          </article>
+        } @empty {
+          <div class="empty-state">
+            <h2>
+              {{
+                store.preview() ? 'No patient reports in preview mode.' : 'No reports to show yet.'
+              }}
+            </h2>
+            <p>Your released lab reports will appear here.</p>
+          </div>
+        }
+      }
+    }
+    @case ('account') {
+      <p class="eyebrow">CARE FOR YOU & YOUR FAMILY</p>
+      <h1>Your account.</h1>
+      @if (!store.signedIn()) {
+        <div class="empty-state">
+          <h2>Keep your details in one place.</h2>
+          <p>Sign in to manage your details, family members and collection addresses.</p>
+          <a class="button" routerLink="/sign-in">Sign in →</a>
+        </div>
+      } @else {
+        <div class="account-top">
+          <p>
+            {{ store.profile()?.name }}
+            @if (store.profile()?.patient_id) {
+              · {{ store.profile()?.patient_id }}
+            }
+          </p>
+          <button class="text-link" [disabled]="store.busy()" (click)="store.signOut()">
+            Sign out
+          </button>
+        </div>
+        @if (store.preview()) {
+          <p class="notice-box">
+            This sample account uses fictional details. Personal-data forms are available only after
+            live sign-in is configured.
+          </p>
+        }
+        <div class="account-grid">
+          <section class="panel">
+            <h2>My details</h2>
+            @if (!store.preview()) {
+              <form (ngSubmit)="saveProfile()">
+                <label
+                  >Name<input
+                    name="name"
+                    [(ngModel)]="name"
+                    required
+                    maxlength="120"
+                    autocomplete="name" /></label
+                ><label
+                  >Date of birth<input name="dob" type="date" [(ngModel)]="dob" required /></label
+                ><label
+                  >Gender<select name="gender" [(ngModel)]="gender" required>
+                    <option value="">Select gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                  </select></label
+                ><label
+                  >Indian mobile number<input
+                    name="phone"
+                    type="tel"
+                    [(ngModel)]="phone"
+                    required
+                    pattern="\+91[6-9][0-9]{9}"
+                    placeholder="+91"
+                    autocomplete="tel"
+                /></label>
+                <p class="hint">Include +91 before your 10-digit mobile number.</p>
+                <button class="button" [disabled]="!store.canEdit()">Save my details</button>
+              </form>
+            } @else {
+              <p>Sample customer</p>
+              <p>Date of birth: 01 January 1990</p>
+              <p>Gender: Male</p>
+            }
+          </section>
+          <section class="panel">
+            <h2>Family members</h2>
+            @for (person of store.people(); track person.id) {
+              <div class="saved-record">
+                <strong>{{ person.name || 'Me' }}</strong>
+                <p>{{ person.relation }}</p>
+              </div>
+            }
+            @if (!store.preview()) {
+              <details>
+                <summary>Add a family member</summary>
+                <form (ngSubmit)="addFamily()">
+                  <label
+                    >Name<input
+                      name="familyName"
+                      [(ngModel)]="familyName"
+                      required
+                      maxlength="120" /></label
+                  ><label
+                    >Relation<select name="relation" [(ngModel)]="relation">
+                      <option value="spouse">Spouse</option>
+                      <option value="parent">Parent</option>
+                      <option value="child">Child</option>
+                      <option value="sibling">Sibling</option>
+                      <option value="other">Other</option>
+                    </select></label
+                  ><label
+                    >Date of birth<input
+                      name="familyDob"
+                      [(ngModel)]="familyDob"
+                      type="date"
+                      required /></label
+                  ><label
+                    >Gender<select name="familyGender" [(ngModel)]="familyGender" required>
+                      <option value="">Select gender</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select></label
+                  ><label class="check"
+                    ><input type="checkbox" name="share" [(ngModel)]="share" required /><span
+                      >I am authorised to share this person’s details.</span
+                    ></label
+                  ><label class="check"
+                    ><input type="checkbox" name="guardian" [(ngModel)]="guardian" /><span
+                      >For a person under 18, I confirm I am their parent or guardian.</span
+                    ></label
+                  ><button class="button" [disabled]="!store.canEdit()">Save family member</button>
+                </form>
+              </details>
+            }
+          </section>
+          <section class="panel">
+            <h2>Collection addresses</h2>
+            @for (address of store.addresses(); track address.id) {
+              <div class="saved-record">
+                <strong>{{ address.type }}</strong>
+                <p>{{ address.house }}, {{ address.area }} · {{ address.pincode }}</p>
+              </div>
+            } @empty {
+              <p>No saved addresses yet.</p>
+            }
+            @if (!store.preview()) {
+              <details>
+                <summary>Add an address</summary>
+                <form (ngSubmit)="addAddress()">
+                  <label
+                    >Address type<select name="type" [(ngModel)]="addressType">
+                      <option value="home">Home</option>
+                      <option value="work">Work</option>
+                      <option value="other">Other</option>
+                    </select></label
+                  ><label
+                    >House / flat<input
+                      name="house"
+                      [(ngModel)]="house"
+                      required
+                      maxlength="200"
+                      autocomplete="address-line1" /></label
+                  ><label
+                    >Street<input
+                      name="street"
+                      [(ngModel)]="street"
+                      maxlength="200"
+                      autocomplete="address-line2" /></label
+                  ><label
+                    >Area<input name="area" [(ngModel)]="area" required maxlength="120" /></label
+                  ><label
+                    >Pincode<input
+                      name="pincode"
+                      [(ngModel)]="pincode"
+                      required
+                      pattern="[1-9][0-9]{5}"
+                      inputmode="numeric"
+                      maxlength="6"
+                      autocomplete="postal-code" /></label
+                  ><label
+                    >Landmark<input name="landmark" [(ngModel)]="landmark" maxlength="200" /></label
+                  ><label
+                    >Access notes<textarea
+                      name="accessNotes"
+                      [(ngModel)]="accessNotes"
+                      maxlength="500"
+                    ></textarea></label
+                  ><button class="button" [disabled]="!store.canEdit()">Save address</button>
+                </form>
+              </details>
+            }
+          </section>
+          <section class="panel subtle">
+            <h2>Privacy & support</h2>
+            <p>Your reports are accessible through short-lived authenticated links.</p>
+            <a class="text-link" routerLink="/privacy">Privacy information →</a
+            ><a class="text-link" routerLink="/help">Get help →</a>
+          </section>
+        </div>
+      }
+    }
+    @case ('privacy') {
+      <article class="legal panel">
+        <p class="eyebrow">YOUR INFORMATION</p>
+        <h1>Privacy information.</h1>
+        <p>
+          This website uses your account, patient and collection details to arrange lab services.
+          Business data is handled by Forum’s API. Reports are private and are opened through
+          short-lived authenticated links.
+        </p>
+        <p>
+          Preview mode uses fictional people and example slots. It does not send a booking or
+          collect personal details.
+        </p>
+        <p>
+          In live mode, Google sign-in is provided through Supabase Auth. Your sign-in token stays
+          in memory for the session. A temporary verifier is saved only while completing sign-in.
+          Guest test selections and an unresolved booking reference may be kept in your browser’s
+          session storage so a retry can be handled safely.
+        </p>
+        <p>
+          Hospital-approved privacy wording, retention details and contact information must be
+          confirmed before public launch. This local version is not ready for public patient use.
+        </p>
+        <a class="text-link" routerLink="/help">Privacy or account questions →</a>
+      </article>
+    }
+    @case ('terms') {
+      <article class="legal panel">
+        <p class="eyebrow">BEFORE BOOKING</p>
+        <h1>Terms information.</h1>
+        <p>
+          Lab test information is not a diagnosis. Ask a qualified clinician which tests are
+          suitable and how to interpret results.
+        </p>
+        <p>
+          Payment is due at collection, by cash or UPI to the phlebotomist. Availability, prices and
+          preparation are confirmed through Forum’s booking service. Cancellation policy is shown
+          before a live booking is placed.
+        </p>
+        <p>
+          You must be authorised to book and share information for other patients. A parent or
+          guardian must confirm for a person under 18.
+        </p>
+        <p>
+          These local development terms require the hospital’s approval before public launch. No
+          booking is created in preview mode.
+        </p>
+      </article>
+    }
+    @case ('help') {
+      <section class="legal panel">
+        <p class="eyebrow">A LITTLE HELP</p>
+        <h1>We’re here for the next step.</h1>
+        <p>
+          For an existing collection, sign in and check My bookings for the latest status. Released
+          reports are listed in Reports.
+        </p>
+        <p>
+          Confirmed hospital phone and WhatsApp details will be added before launch. This preview
+          does not send support requests.
+        </p>
+        <div class="actions">
+          <a class="button outline" routerLink="/bookings">My bookings</a
+          ><a class="button outline" routerLink="/reports">My reports</a>
+        </div>
+      </section>
+    }
+    @default {
+      <div class="empty-state">
+        <h1>We couldn’t find that page.</h1>
+        <p>Start from the homepage or browse lab tests.</p>
+        <a class="button" routerLink="/">Back to home</a>
+      </div>
+    }
+  }
+</main>
