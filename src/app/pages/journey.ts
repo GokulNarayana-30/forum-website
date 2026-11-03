@@ -1,4 +1,12 @@
-import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import {
+  Component,
+  RESPONSE_INIT,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -29,6 +37,8 @@ export class Journey {
   private readonly router = inject(Router);
   private readonly title = inject(Title);
   private readonly meta = inject(Meta);
+  // Only set while the server renders a page; the browser has no response to change.
+  private readonly responseInit = inject(RESPONSE_INIT, { optional: true });
   protected readonly view = signal('');
   protected readonly detail = signal<Detail | null>(null);
   protected readonly detailLoading = signal(false);
@@ -92,6 +102,8 @@ export class Journey {
     });
     this.route.data.pipe(takeUntilDestroyed()).subscribe((d) => {
       this.view.set(d['view']);
+      // An unknown address still shows the helpful page, but search engines must see a 404.
+      if (d['view'] === 'not-found' && this.responseInit) this.responseInit.status = 404;
       if (d['detail']) {
         this.detail.set(d['detail']);
         this.title.setTitle(d['detail'].item.name + ' | Forum Labs');
