@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { WebsiteApi, authCallbackPath } from './api';
+import { WebsiteApi, authCallbackPath, isAuthCallback } from './api';
 
 describe('Website network boundaries', () => {
   let api: WebsiteApi;
@@ -129,5 +129,13 @@ describe('Sign-in return address', () => {
     expect(authCallbackPath('https://gokulnarayana-30.github.io/forum-website/')).toBe(
       '/forum-website/auth/callback',
     );
+  });
+  it('recognises the callback page at the root and under a sub-path, and nothing else', () => {
+    const pages = 'https://gokulnarayana-30.github.io/forum-website/';
+    expect(isAuthCallback('/auth/callback', 'https://example.test/')).toBe(true);
+    expect(isAuthCallback('/forum-website/auth/callback', pages)).toBe(true);
+    // A root-style address is not the callback when the site lives under /forum-website/.
+    expect(isAuthCallback('/auth/callback', pages)).toBe(false);
+    expect(isAuthCallback('/forum-website/cart', pages)).toBe(false);
   });
 });
