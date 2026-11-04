@@ -1,6 +1,7 @@
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { Address } from '../core/models';
 import { WebsiteStore } from '../core/store';
 import { AddressPicker, PickedLocation } from './address-picker';
 
@@ -15,6 +16,8 @@ export class Account {
   protected readonly store = inject(WebsiteStore);
   protected readonly section = signal<Section>('profile');
   protected readonly editing = signal(false);
+  /** The saved address being changed, or null while a new one is added. */
+  protected readonly editingAddressId = signal<string | null>(null);
   protected readonly saved = signal('');
   protected readonly saveError = signal('');
   protected readonly family = computed(() =>
@@ -69,6 +72,7 @@ export class Account {
           this.profileForm = { name: '', dob: '', gender: '', phone: '' };
           this.familyForm = this.emptyFamily();
           this.addressForm = this.emptyAddress();
+          this.editingAddressId.set(null);
         });
     });
   }
@@ -97,6 +101,24 @@ export class Account {
     };
     this.familyForm = this.emptyFamily();
     this.addressForm = this.emptyAddress();
+    this.editingAddressId.set(null);
+    this.saved.set('');
+    this.saveError.set('');
+    this.editing.set(true);
+  }
+  /** Opens a saved address for changing. Its pin is not stored here, so the form starts without one. */
+  protected editAddress(address: Address): void {
+    this.addressForm = {
+      ...this.emptyAddress(),
+      type: address.type,
+      house: address.house,
+      street: address.street ?? '',
+      area: address.area,
+      pincode: address.pincode,
+      landmark: address.landmark ?? '',
+      access_notes: address.access_notes ?? '',
+    };
+    this.editingAddressId.set(address.id);
     this.saved.set('');
     this.saveError.set('');
     this.editing.set(true);
@@ -112,9 +134,10 @@ export class Account {
     else if (section === 'addresses') {
       // The pin's coordinates travel only as a pair, and only while the address still matches it.
       const { latitude, longitude, ...address } = this.addressForm;
-      await this.store.addAddress(
-        latitude !== null && longitude !== null ? { ...address, latitude, longitude } : address,
-      );
+      const body = latitude !== null && longitude !== null ? { ...address, latitude, longitude } : address;
+      const id = this.editingAddressId();
+      if (id) await this.store.updateAddress(id, body);
+      else await this.store.addAddress(body);
     } else return;
     if (this.store.error()) this.saveError.set(this.store.error());
     else if (this.store.signedIn()) {
@@ -124,7 +147,9 @@ export class Account {
           ? 'Your details have been saved.'
           : section === 'family'
             ? 'Family member added.'
-            : 'Address added.',
+            : this.editingAddressId()
+              ? 'Address saved.'
+              : 'Address added.',
       );
     }
   }

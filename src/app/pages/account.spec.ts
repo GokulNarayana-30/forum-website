@@ -28,6 +28,7 @@ function fakeStore() {
     saveProfile: vi.fn().mockResolvedValue(undefined),
     addFamily: vi.fn().mockResolvedValue(undefined),
     addAddress: vi.fn().mockResolvedValue(undefined),
+    updateAddress: vi.fn().mockResolvedValue(undefined),
     signOut: vi.fn(),
   };
 }
@@ -117,6 +118,54 @@ describe('Customer account sections', () => {
     fixture.detectChanges();
     expect(root.querySelector('form')).toBeNull();
     expect(store.addAddress).not.toHaveBeenCalled();
+  });
+  describe('changing a saved address', () => {
+    const SAVED = {
+      id: 'addr-1',
+      type: 'home',
+      house: 'Flat 12',
+      street: '4th Cross Road',
+      area: 'Jayanagar',
+      pincode: '560011',
+      landmark: 'Near the park',
+    };
+    async function openEdit() {
+      store.addresses.set([SAVED] as never);
+      const fixture = await render();
+      const root: HTMLElement = fixture.nativeElement;
+      button(root, 'Saved addresses').click();
+      fixture.detectChanges();
+      button(root, 'Edit').click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      return { fixture, root };
+    }
+    it('opens the saved address in the form and saves the change under the same id', async () => {
+      const { fixture, root } = await openEdit();
+      const field = (name: string) => root.querySelector(`[name="${name}"]`) as HTMLInputElement;
+      expect(field('house').value).toBe('Flat 12');
+      expect(field('pincode').value).toBe('560011');
+      field('house').value = 'Flat 14';
+      field('house').dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      button(root, 'Save changes').click();
+      await fixture.whenStable();
+      expect(store.updateAddress).toHaveBeenCalledWith(
+        'addr-1',
+        expect.objectContaining({ house: 'Flat 14', pincode: '560011' }),
+      );
+      expect(store.addAddress).not.toHaveBeenCalled();
+    });
+    it('adds a new address, not a change, after Add address follows an edit', async () => {
+      const { fixture, root } = await openEdit();
+      button(root, 'Cancel').click();
+      fixture.detectChanges();
+      button(root, '+ Add address').click();
+      fixture.detectChanges();
+      expect(button(root, 'Save address')).toBeDefined();
+    });
   });
   describe('the address form with the map picker', () => {
     const PLACE: PickedLocation = {
