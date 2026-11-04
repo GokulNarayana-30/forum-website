@@ -1,3 +1,5 @@
+import { TEST_ICONS } from './test-icons';
+
 export interface Category {
   id: string;
   name: string;
@@ -153,11 +155,12 @@ const KNOWN_IMAGES = new Set([
   'cat_vitamins',
   'cat_womens_health',
 ]);
-// Picture for a test or package: the API image if given, a bundled picture for that item,
+// Picture for a test or package: the API image if given, the bundled picture of that test,
 // else the picture of its first category, else the generic collection banner.
 export function itemImage(item: Item): string {
   if (item.image_url) return item.image_url;
   const own = `assets/${item.id}.webp`;
+  if (item.id.startsWith('t-') && TEST_ICONS.has(item.id.slice(2))) return `assets/tests/${item.id.slice(2)}.webp`;
   if (!item.id.startsWith('p-') && !item.id.startsWith('t-')) return own;
   const cat = (item.category_ids?.[0] ?? '').replace(/^cat-/, 'cat_').replace(/-/g, '_');
   return KNOWN_IMAGES.has(cat) ? `assets/${cat}.webp` : 'assets/banner_home_collection.webp';
