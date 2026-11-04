@@ -834,6 +834,16 @@ export class WebsiteStore {
       await this.loadAccount();
     });
   }
+  /** Changes a saved address, keeping its id; the list is read again so checkout sees the new text. */
+  async updateAddress(id: string, data: Record<string, unknown>): Promise<void> {
+    if (this.preview()) return;
+    await this.run(async () => {
+      await this.api.request('/me/addresses/' + encodeURIComponent(id), 'PATCH', data);
+      this.addresses.set(await this.api.request<Address[]>('/me/addresses'));
+      const open = this.address();
+      if (open) this.address.set(this.addresses().find((a) => a.id === open.id) ?? null);
+    });
+  }
   async addAddress(data: Record<string, unknown>): Promise<void> {
     if (this.preview()) return;
     await this.run(async () => {

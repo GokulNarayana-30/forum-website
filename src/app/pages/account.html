@@ -266,7 +266,9 @@
                       ? 'Save details'
                       : section() === 'family'
                         ? 'Save family member'
-                        : 'Save address'
+                        : editingAddressId()
+                          ? 'Save changes'
+                          : 'Save address'
                 }}</button
               ><button
                 class="button outline"
@@ -357,6 +359,16 @@
                         <p>Near {{ address.landmark }}</p>
                       }
                     </div>
+                    @if (!store.preview()) {
+                      <button
+                        type="button"
+                        class="button outline small"
+                        [disabled]="!store.canEdit()"
+                        (click)="editAddress(address)"
+                      >
+                        Edit
+                      </button>
+                    }
                   </article>
                 } @empty {
                   <div class="quiet-empty">
