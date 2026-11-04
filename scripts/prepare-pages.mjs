@@ -24,7 +24,7 @@ for (const name of readdirSync(dir).filter((f) => f.endsWith('.css') || f.endsWi
     rewritten += 1;
   }
 }
-if (rewritten === 0) {
+if (rewritten === 0 && base !== '/') {
   console.error('Nothing referenced /assets/: the font path fix is no longer needed or broke.');
   process.exit(1);
 }

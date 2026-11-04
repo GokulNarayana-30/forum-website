@@ -27,9 +27,9 @@ jobs:
       - name: Test
         run: npm test -- --watch=false
       - name: Build with the Pages base path
-        run: npx ng build --base-href /forum-website/
-      - name: Prepare for a static host under a sub-path
-        run: node scripts/prepare-pages.mjs dist/web/browser /forum-website/
+        run: npx ng build --base-href /
+      - name: Prepare for a static host
+        run: node scripts/prepare-pages.mjs dist/web/browser /
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist/web/browser
