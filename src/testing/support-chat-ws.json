@@ -1,0 +1,258 @@
+{
+  "version": 1,
+  "client_frames": [
+    {
+      "name": "customer_auth",
+      "frame": {
+        "type": "auth",
+        "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.sample.sig",
+        "mode": "customer",
+        "last_known_availability": "away"
+      }
+    },
+    {
+      "name": "staff_auth",
+      "frame": {
+        "type": "auth",
+        "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.staff.sig",
+        "mode": "staff",
+        "last_known_availability": "available"
+      }
+    },
+    {
+      "name": "auth_refresh",
+      "frame": {
+        "type": "auth.refresh",
+        "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.refreshed.sig"
+      }
+    },
+    {
+      "name": "chat_join_with_cursor",
+      "frame": {
+        "type": "chat.join",
+        "ticket_id": "11111111-1111-4111-8111-111111111111",
+        "after_seq": 3
+      }
+    },
+    {
+      "name": "chat_leave",
+      "frame": {
+        "type": "chat.leave",
+        "ticket_id": "11111111-1111-4111-8111-111111111111"
+      }
+    },
+    {
+      "name": "typing_on",
+      "frame": {
+        "type": "typing",
+        "ticket_id": "11111111-1111-4111-8111-111111111111",
+        "is_typing": true
+      }
+    },
+    {
+      "name": "chat_delivered",
+      "frame": {
+        "type": "chat.delivered",
+        "ticket_id": "11111111-1111-4111-8111-111111111111",
+        "seq": 4
+      }
+    },
+    {
+      "name": "chat_read",
+      "frame": {
+        "type": "chat.read",
+        "ticket_id": "11111111-1111-4111-8111-111111111111",
+        "seq": 4
+      }
+    },
+    {
+      "name": "ping",
+      "frame": {
+        "type": "ping",
+        "ts": 1763119800000
+      }
+    },
+    {
+      "name": "staff_heartbeat",
+      "frame": {
+        "type": "staff.heartbeat"
+      }
+    }
+  ],
+  "invalid_client_frames": [
+    {
+      "name": "auth_empty_token",
+      "frame": {
+        "type": "auth",
+        "token": "",
+        "mode": "customer"
+      }
+    },
+    {
+      "name": "chat_join_negative_seq",
+      "frame": {
+        "type": "chat.join",
+        "ticket_id": "11111111-1111-4111-8111-111111111111",
+        "after_seq": -1
+      }
+    },
+    {
+      "name": "auth_unknown_mode",
+      "frame": {
+        "type": "auth",
+        "token": "valid-token",
+        "mode": "admin"
+      }
+    },
+    {
+      "name": "unsupported_frame_type",
+      "frame": {
+        "type": "chat.send",
+        "body": "should go over REST"
+      }
+    }
+  ],
+  "server_frames": [
+    {
+      "name": "auth_ok_customer",
+      "frame": {
+        "type": "auth.ok",
+        "mode": "customer",
+        "expires_at": "2026-11-14T11:30:00.000Z",
+        "availability": {
+          "online": true,
+          "reason": "online",
+          "next_open_at": null,
+          "opens_in_ist_text": null
+        }
+      }
+    },
+    {
+      "name": "auth_error_role",
+      "frame": {
+        "type": "auth.error",
+        "code": "forbidden_role",
+        "message": "Your role does not have live chat access."
+      }
+    },
+    {
+      "name": "chat_error_not_found",
+      "frame": {
+        "type": "chat.error",
+        "code": "not_found",
+        "ticket_id": "11111111-1111-4111-8111-111111111111"
+      }
+    },
+    {
+      "name": "pong",
+      "frame": {
+        "type": "pong",
+        "server_time": "2026-11-14T11:00:00.000Z",
+        "ts": 1763119800000
+      }
+    },
+    {
+      "name": "chat_joined",
+      "frame": {
+        "type": "chat.joined",
+        "ticket_id": "11111111-1111-4111-8111-111111111111",
+        "read_state": {
+          "ticket_id": "11111111-1111-4111-8111-111111111111",
+          "last_seq": 4,
+          "customer_delivered_seq": 3,
+          "customer_read_seq": 2,
+          "staff_delivered_seq": 4,
+          "staff_read_seq": 4,
+          "customer_delivered_at": "2026-11-14T10:59:00.000Z",
+          "customer_read_at": "2026-11-14T10:58:00.000Z",
+          "staff_delivered_at": "2026-11-14T10:59:30.000Z",
+          "staff_read_at": "2026-11-14T10:59:30.000Z"
+        },
+        "catch_up_required": true
+      }
+    },
+    {
+      "name": "chat_message_support",
+      "frame": {
+        "type": "chat.message",
+        "ticket_id": "11111111-1111-4111-8111-111111111111",
+        "message": {
+          "id": "22222222-2222-4222-8222-222222222222",
+          "sender": "support",
+          "body": "Our phlebotomist is scheduled for 7:30 AM IST.",
+          "sent_at": "2026-11-14T11:00:05.000Z",
+          "seq": 5
+        }
+      }
+    },
+    {
+      "name": "chat_receipt",
+      "frame": {
+        "type": "chat.receipt",
+        "ticket_id": "11111111-1111-4111-8111-111111111111",
+        "read_state": {
+          "ticket_id": "11111111-1111-4111-8111-111111111111",
+          "last_seq": 5,
+          "customer_delivered_seq": 5,
+          "customer_read_seq": 5,
+          "staff_delivered_seq": 5,
+          "staff_read_seq": 5,
+          "customer_delivered_at": "2026-11-14T11:00:06.000Z",
+          "customer_read_at": "2026-11-14T11:00:07.000Z",
+          "staff_delivered_at": "2026-11-14T11:00:05.000Z",
+          "staff_read_at": "2026-11-14T11:00:05.000Z"
+        }
+      }
+    },
+    {
+      "name": "chat_typing",
+      "frame": {
+        "type": "chat.typing",
+        "ticket_id": "11111111-1111-4111-8111-111111111111",
+        "actor": "support",
+        "is_typing": true,
+        "expires_at": "2026-11-14T11:00:09.000Z"
+      }
+    },
+    {
+      "name": "chat_ticket_update",
+      "frame": {
+        "type": "chat.ticket",
+        "ticket_id": "11111111-1111-4111-8111-111111111111",
+        "channel": "chat",
+        "status": "in_progress",
+        "last_seq": 5,
+        "staff_unread_count": 0,
+        "updated_at": "2026-11-14T11:00:07.000Z"
+      }
+    },
+    {
+      "name": "chat_availability_offline",
+      "frame": {
+        "type": "chat.availability",
+        "availability": {
+          "online": false,
+          "reason": "outside_hours",
+          "next_open_at": "2026-11-15T01:30:00.000Z",
+          "opens_in_ist_text": "Opens tomorrow at 7:00 AM IST"
+        }
+      }
+    },
+    {
+      "name": "resync_required",
+      "frame": {
+        "type": "resync_required"
+      }
+    },
+    {
+      "name": "protocol_error",
+      "frame": {
+        "type": "error",
+        "code": "rate_limited",
+        "message": "Too many messages sent over WebSocket.",
+        "request_id": "req-ws-1"
+      }
+    }
+  ]
+}
+

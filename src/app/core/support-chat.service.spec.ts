@@ -1,6 +1,6 @@
 import { PLATFORM_ID, provideAppInitializer, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import wsFixture from '../../../../docs/api/fixtures/support-chat-ws.json';
+import wsFixture from '../../testing/support-chat-ws.json';
 import { WebsiteApi, WebsiteError } from './api';
 import { WebsiteStore } from './store';
 import { SupportChatService } from './support-chat.service';
