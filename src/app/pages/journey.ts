@@ -1,5 +1,7 @@
+import { isPlatformBrowser } from '@angular/common';
 import {
   Component,
+  PLATFORM_ID,
   RESPONSE_INIT,
   computed,
   effect,
@@ -11,7 +13,9 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Title, Meta } from '@angular/platform-browser';
+import { SafeSignInReturn, safeSignInReturn } from '../core/api';
 import { WebsiteStore } from '../core/store';
+import { SupportChatService } from '../core/support-chat.service';
 import {
   Detail,
   Item,
@@ -34,6 +38,8 @@ import { Account } from './account';
 })
 export class Journey {
   protected readonly store = inject(WebsiteStore);
+  private readonly chat = inject(SupportChatService);
+  private readonly platformId = inject(PLATFORM_ID);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly title = inject(Title);
@@ -41,6 +47,7 @@ export class Journey {
   // Only set while the server renders a page; the browser has no response to change.
   private readonly responseInit = inject(RESPONSE_INIT, { optional: true });
   protected readonly view = signal('');
+  protected readonly nextReturn = signal<SafeSignInReturn | null>(null);
   protected readonly detail = signal<Detail | null>(null);
   protected readonly detailLoading = signal(false);
   protected readonly query = signal('');
@@ -83,6 +90,7 @@ export class Journey {
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       this.query.set(params.get('q') ?? '');
       this.category.set(params.get('category') ?? '');
+      this.nextReturn.set(safeSignInReturn(params.get('next')));
     });
     this.route.data.pipe(takeUntilDestroyed()).subscribe((d) => {
       this.view.set(d['view']);
@@ -108,6 +116,8 @@ export class Journey {
         if (signed && view === 'reports') void this.store.loadReports();
         if (signed && ['cart', 'checkout'].includes(view))
           void this.store.run(() => this.store.refreshCart());
+        if (isPlatformBrowser(this.platformId) && view === 'help' && this.chat.canConnectLive())
+          void this.chat.refreshUnread();
       });
     });
     effect(() => {
@@ -149,8 +159,9 @@ export class Journey {
     await this.router.navigateByUrl(this.store.signedIn() ? '/checkout' : '/sign-in');
   }
   protected async signIn(): Promise<void> {
-    await this.store.signIn();
-    if (this.store.signedIn()) await this.router.navigateByUrl('/checkout');
+    const next = this.nextReturn();
+    await this.store.signIn(next);
+    if (this.store.signedIn()) await this.router.navigateByUrl(next ?? '/checkout');
   }
   protected async place(): Promise<void> {
     const ok = await this.store.place();

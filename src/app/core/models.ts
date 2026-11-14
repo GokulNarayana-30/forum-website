@@ -240,3 +240,90 @@ export function bannerLink(
       return null; // a coupon or "none" has nothing to open on the website
   }
 }
+
+export type SupportAvailabilityReason =
+  | 'online'
+  | 'outside_hours'
+  | 'holiday'
+  | 'no_agent_available';
+
+export interface SupportAvailability {
+  online: boolean;
+  reason: SupportAvailabilityReason;
+  next_open_at: string | null;
+  opens_in_ist_text: string | null;
+}
+
+export interface ChatReadState {
+  ticket_id: string;
+  last_seq: number;
+  customer_delivered_seq: number;
+  customer_read_seq: number;
+  staff_delivered_seq: number;
+  staff_read_seq: number;
+  customer_delivered_at: string | null;
+  customer_read_at: string | null;
+  staff_delivered_at: string | null;
+  staff_read_at: string | null;
+}
+
+export type TicketChannel = 'app' | 'phone' | 'walk_in' | 'chat';
+
+export interface CustomerTicketSummary {
+  id: string;
+  reference: string;
+  category: string;
+  status: string;
+  channel?: TicketChannel;
+  unread_count?: number;
+  description: string;
+  booking_id: string | null;
+  booking_ref: string | null;
+  report_id: string | null;
+  report_released_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CustomerTicketMessage {
+  id: string;
+  sender: 'customer' | 'support';
+  body: string;
+  sent_at: string;
+  seq?: number | null;
+  attachments?: Array<{ id: string; mime: string; size: number }>;
+}
+
+export interface CustomerTicketDetail {
+  ticket: CustomerTicketSummary;
+  messages: CustomerTicketMessage[];
+}
+
+export interface CustomerChatBootstrap {
+  ticket: CustomerTicketSummary | null;
+  messages: CustomerTicketMessage[];
+  read_state: ChatReadState | null;
+  availability: SupportAvailability;
+  unread_count: number;
+}
+
+export interface CustomerChatMessageResult {
+  ticket: CustomerTicketSummary;
+  message: CustomerTicketMessage;
+  read_state: ChatReadState;
+  availability: SupportAvailability;
+  created: boolean;
+}
+
+export interface TicketMessagesPage {
+  ticket_id: string;
+  status: string;
+  messages: CustomerTicketMessage[];
+  read_state: ChatReadState | null;
+  has_more: boolean;
+}
+
+export interface SupportUnreadSummary {
+  total_unread: number;
+  chat_unread: number;
+}

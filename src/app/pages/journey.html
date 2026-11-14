@@ -900,12 +900,20 @@
           For an existing collection, sign in and check My bookings for the latest status. Released
           reports are listed in Reports.
         </p>
-        <p>
-          Confirmed hospital phone and WhatsApp details will be added before launch. This preview
-          does not send support requests.
-        </p>
+        @if (store.preview()) {
+          <p>
+            Confirmed hospital phone and WhatsApp details will be added before launch. This preview
+            does not send support requests.
+          </p>
+        } @else {
+          <p>
+            Confirmed hospital phone and WhatsApp details will be added before launch. Start a live
+            support conversation or check your previous requests anytime.
+          </p>
+        }
         <div class="actions">
-          <a class="button outline" routerLink="/bookings">My bookings</a
+          <a class="button" routerLink="/chat">Chat with Forum Labs support</a
+          ><a class="button outline" routerLink="/bookings">My bookings</a
           ><a class="button outline" routerLink="/reports">My reports</a>
         </div>
       </section>

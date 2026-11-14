@@ -71,7 +71,14 @@
   </div>
   <div>
     <a routerLink="/terms">Terms</a> · <a routerLink="/privacy">Privacy</a> ·
-    <a routerLink="/help">Help</a>
+    <a routerLink="/help"
+      >Help@if (chat.unread().total_unread > 0) {<span
+          class="help-unread-badge"
+          style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--primary);color:var(--white);font-size:10px;font-weight:600;margin-left:5px"
+          [attr.aria-label]="chat.unread().total_unread + ' unread support messages'"
+          >{{ chat.unread().total_unread }}</span
+        >}</a
+    >
     <p>Test information is not a diagnosis.</p>
   </div>
   <a routerLink="/tests">Explore tests →</a>

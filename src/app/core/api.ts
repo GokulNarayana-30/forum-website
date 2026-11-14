@@ -30,6 +30,17 @@ const SESSION_KEY = 'forum-web-session';
 // A token this close to its end is renewed first, so a request never leaves with one that expires mid-flight.
 const RENEW_MARGIN_MS = 30000;
 
+export const ALLOWED_SIGN_IN_RETURNS = ['/chat', '/cart', '/checkout'] as const;
+export type SafeSignInReturn = (typeof ALLOWED_SIGN_IN_RETURNS)[number];
+
+export function safeSignInReturn(next: string | null | undefined): SafeSignInReturn | null {
+  if (typeof next !== 'string') return null;
+  const trimmed = next.trim();
+  return (ALLOWED_SIGN_IN_RETURNS as readonly string[]).includes(trimmed)
+    ? (trimmed as SafeSignInReturn)
+    : null;
+}
+
 interface StoredSession {
   access: string;
   refresh: string;
@@ -42,6 +53,7 @@ export class WebsiteApi {
   readonly signedIn = signal(false);
   private token: string | null = null;
   private expiresAt = 0;
+  private pendingReturnTo: SafeSignInReturn | null = null;
   async configure(): Promise<void> {
     const c = publicConfig;
     if (!['preview', 'live'].includes(c.mode)) throw new WebsiteError('configuration');
@@ -114,9 +126,10 @@ export class WebsiteApi {
       throw new WebsiteError('response');
     }
   }
-  async signIn(): Promise<void> {
+  async signIn(next?: string | null): Promise<void> {
     const cfg = this.config();
     if (cfg.mode !== 'live') throw new WebsiteError('preview');
+    const returnTo = safeSignInReturn(next);
     const bytes = crypto.getRandomValues(new Uint8Array(32));
     const encode = (b: Uint8Array) =>
       btoa(String.fromCharCode(...b))
@@ -129,7 +142,11 @@ export class WebsiteApi {
     );
     sessionStorage.setItem(
       'forum-web-pkce',
-      JSON.stringify({ verifier, expiresAt: Date.now() + 600000 }),
+      JSON.stringify({
+        verifier,
+        expiresAt: Date.now() + 600000,
+        ...(returnTo ? { returnTo } : {}),
+      }),
     );
     const u = new URL(cfg.supabaseUrl + '/auth/v1/authorize');
     u.search = new URLSearchParams({
@@ -148,13 +165,14 @@ export class WebsiteApi {
     const providerError =
       url.searchParams.get('error_description') ?? hash.get('error_description');
     history.replaceState(null, '', authCallbackPath());
-    let stored: { verifier?: string; expiresAt?: number } = {};
+    let stored: { verifier?: string; expiresAt?: number; returnTo?: string } = {};
     try {
       stored = JSON.parse(sessionStorage.getItem('forum-web-pkce') ?? '{}');
     } catch {
       /* fail closed */
     }
     sessionStorage.removeItem('forum-web-pkce');
+    this.pendingReturnTo = safeSignInReturn(stored.returnTo);
     const fail = (reason: string, message: string): never => {
       console.warn('[forum-web] sign-in stopped:', reason);
       throw new WebsiteError('sign_in', message);
@@ -195,7 +213,28 @@ export class WebsiteApi {
       throw new WebsiteError('sign_in');
     this.adopt(data.access_token, data.expires_in, data.refresh_token);
   }
+  consumeSignInReturn(): SafeSignInReturn | null {
+    const target = this.pendingReturnTo;
+    this.pendingReturnTo = null;
+    return target;
+  }
   /** Brings a session kept by this tab back after a page refresh. True when the visitor is signed in. */
+  /** Returns an active access token in live mode, renewing through the stored refresh token when needed. */
+  async accessToken(options?: { forceRefresh?: boolean }): Promise<string | null> {
+    if (this.config().mode !== 'live') return null;
+    if (
+      options?.forceRefresh ||
+      !this.token ||
+      Date.now() >= this.expiresAt - RENEW_MARGIN_MS
+    ) {
+      await this.renewFromStore();
+    }
+    if (!this.token || Date.now() >= this.expiresAt) {
+      this.clearSession();
+      return null;
+    }
+    return this.token;
+  }
   async restoreSession(): Promise<boolean> {
     if (this.config().mode !== 'live') return false;
     const stored = this.readStored();

@@ -1,5 +1,5 @@
 import { Injectable, computed, inject, signal, effect, untracked } from '@angular/core';
-import { WebsiteApi, WebsiteError } from './api';
+import { SafeSignInReturn, WebsiteApi, WebsiteError } from './api';
 import {
   Address,
   Category,
@@ -361,7 +361,7 @@ export class WebsiteStore {
         );
     });
   }
-  async signIn(): Promise<void> {
+  async signIn(next?: string | null): Promise<void> {
     if (!this.terms()) {
       this.error.set('Please accept the terms and privacy notice to continue.');
       return;
@@ -395,8 +395,11 @@ export class WebsiteStore {
           },
         ]);
         this.profile.set({ id: 'sample-account', name: 'Sample customer', relation: 'self' });
-      } else await this.api.signIn();
+      } else await this.api.signIn(next);
     });
+  }
+  consumeSignInReturn(): SafeSignInReturn | null {
+    return this.api.consumeSignInReturn();
   }
   private async loadAccount(): Promise<void> {
     const p = await this.api.request<Profile>('/me');

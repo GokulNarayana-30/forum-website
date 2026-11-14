@@ -1,0 +1,239 @@
+<main id="main" class="shell chat-page">
+  <div class="breadcrumbs">
+    <a routerLink="/">Home</a><span aria-hidden="true">/</span
+    ><a routerLink="/help">Help</a><span aria-hidden="true">/</span><span>Support chat</span>
+  </div>
+
+  <p class="eyebrow">LIVE SUPPORT</p>
+  <h1>Support chat</h1>
+  <p class="lead">
+    Ask about home sample collections, preparation, bookings, or released reports.
+  </p>
+
+  @if (store.preview()) {
+    <section class="panel chat-preview">
+      <div class="status-pill offline">Preview mode</div>
+      <h2>This preview does not send support requests.</h2>
+      <p>
+        {{
+          chat.availability()?.opens_in_ist_text ||
+            'Preview mode uses local example data with no server or socket connections.'
+        }}
+      </p>
+      <div class="actions">
+        <a class="button outline" routerLink="/help">Back to help</a>
+        <a class="button" routerLink="/tests">Explore tests →</a>
+      </div>
+    </section>
+  } @else if (chat.accountRefused(); as refusal) {
+    <section class="panel" role="alert">
+      <h2>Support chat unavailable</h2>
+      <p>{{ chat.error() }}</p>
+      <div class="actions">
+        @if (refusal === 'account_not_ready') {
+          <button class="button" type="button" (click)="retryAccountNotReady()">
+            Retry connection
+          </button>
+        } @else {
+          <a class="button" routerLink="/sign-in" [queryParams]="{ next: '/chat' }">
+            Sign in again →
+          </a>
+        }
+        <a class="button outline" routerLink="/help">Back to help</a>
+      </div>
+    </section>
+  } @else if (!store.signedIn()) {
+    <section class="panel chat-guest">
+      @if (chat.availability(); as avail) {
+        <div class="availability-banner" [class.is-online]="avail.online" role="status">
+          <strong>{{ avail.online ? 'Support is online' : 'Support is currently offline' }}</strong>
+          @if (!avail.online && avail.opens_in_ist_text) {
+            <span> · {{ avail.opens_in_ist_text }}</span>
+          }
+        </div>
+      }
+      <h2>Sign in to start live chat</h2>
+      <p>
+        Sign in with your Forum Labs account so our support team can view your bookings safely and
+        keep your conversation history private.
+      </p>
+      <div class="actions">
+        <a class="button" routerLink="/sign-in" [queryParams]="{ next: '/chat' }">
+          Sign in to start live chat →
+        </a>
+        <a class="button outline" routerLink="/help">Back to help</a>
+      </div>
+    </section>
+  } @else {
+    @if (chat.availability(); as avail) {
+      <div class="availability-banner" [class.is-online]="avail.online" role="status">
+        <strong>{{ avail.online ? 'Support is online' : 'Support is currently offline' }}</strong>
+        @if (avail.online) {
+          <span> · Live connection: {{ chat.connectionState() }}</span>
+        } @else {
+          <span>
+            ·
+            {{
+              avail.opens_in_ist_text ||
+                'Leave a message now and our support team will reply when support reopens.'
+            }}
+          </span>
+        }
+      </div>
+    }
+
+    <div class="chat-layout">
+      <section class="panel chat-thread" aria-label="Active support chat">
+        <div class="thread-head">
+          <div>
+            <h2>
+              @if (chat.ticket(); as active) {
+                Conversation {{ active.reference }}
+              } @else {
+                Start a conversation
+              }
+            </h2>
+            @if (chat.ticket(); as active) {
+              <p class="hint">Status: {{ statusText(active.status) }}</p>
+            } @else {
+              <p class="hint">Send a message to open a live support conversation.</p>
+            }
+          </div>
+          @if (loading()) {
+            <span class="hint" role="status">Loading…</span>
+          }
+        </div>
+
+        <div class="messages-log" role="log" aria-live="polite" aria-label="Chat messages">
+          @for (msg of chat.messages(); track msg.id) {
+            <article class="msg" [class.mine]="msg.sender === 'customer'">
+              <div class="msg-meta">
+                <strong>{{ msg.sender === 'customer' ? 'You' : 'Forum Labs support' }}</strong>
+                <time [attr.datetime]="msg.sent_at">{{ instant(msg.sent_at) }}</time>
+              </div>
+              <p class="msg-body">{{ msg.body }}</p>
+            </article>
+          } @empty {
+            <p class="empty-chat">
+              No messages yet. Write below and a support team member will respond here.
+            </p>
+          }
+        </div>
+
+        @if (deliveryStatusLabel()) {
+          <p class="receipt-cue" aria-live="polite">{{ deliveryStatusLabel() }}</p>
+        }
+
+        @if (chat.staffTyping()) {
+          <p class="typing-cue" aria-live="polite">Forum Labs support is typing…</p>
+        }
+
+        @if (chat.error()) {
+          <p class="inline-error" role="alert">{{ chat.error() }}</p>
+        }
+
+        <form class="composer" (ngSubmit)="sendLive()">
+          <label>
+            <span class="sr-only">Message</span>
+            <textarea
+              name="chatDraft"
+              rows="3"
+              maxlength="500"
+              placeholder="Write your message to Forum Labs support…"
+              [ngModel]="draft()"
+              (ngModelChange)="onDraftInput($event)"
+            ></textarea>
+          </label>
+          <div class="composer-foot">
+            <span class="hint">Text messages only · {{ draft().length }}/500</span>
+            <button
+              class="button"
+              type="submit"
+              [disabled]="!draft().trim() || chat.sending()"
+            >
+              {{ chat.sending() ? 'Sending…' : 'Send message' }}
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <aside class="panel chat-history" aria-label="My past support requests">
+        <div class="history-head">
+          <h2>My past support requests</h2>
+          @if (chat.unread().total_unread > 0) {
+            <span class="status-pill">{{ chat.unread().total_unread }} unread</span>
+          }
+        </div>
+
+        <div class="ticket-list">
+          @for (item of chat.tickets(); track item.id) {
+            <button
+              type="button"
+              class="ticket-item"
+              [class.selected]="chat.selectedHistoryDetail()?.ticket?.id === item.id"
+              (click)="openTicket(item)"
+            >
+              <div class="ticket-row">
+                <strong>{{ item.reference }}</strong>
+                <span class="badge">{{ statusText(item.status) }}</span>
+              </div>
+              <p class="ticket-desc">{{ item.description }}</p>
+              <div class="ticket-row">
+                <span class="hint">{{ item.channel || 'app' }} · {{ instant(item.updated_at) }}</span>
+                @if ((item.unread_count ?? 0) > 0) {
+                  <span class="unread-dot">{{ item.unread_count }}</span>
+                }
+              </div>
+            </button>
+          } @empty {
+            <p class="hint">No previous support requests yet.</p>
+          }
+        </div>
+
+        @if (historyLoading()) {
+          <p class="hint" role="status">Loading conversation…</p>
+        } @else if (chat.selectedHistoryDetail(); as detail) {
+          <div class="history-detail">
+            <h3>{{ detail.ticket.reference }} · {{ statusText(detail.ticket.status) }}</h3>
+            <div class="history-messages">
+              @for (m of detail.messages; track m.id) {
+                <article class="msg" [class.mine]="m.sender === 'customer'">
+                  <div class="msg-meta">
+                    <strong>{{ m.sender === 'customer' ? 'You' : 'Forum Labs support' }}</strong>
+                    <time [attr.datetime]="m.sent_at">{{ instant(m.sent_at) }}</time>
+                  </div>
+                  <p class="msg-body">{{ m.body }}</p>
+                </article>
+              }
+            </div>
+
+            @if (canReplyHistory()) {
+              <form class="composer" (ngSubmit)="sendHistoryReply()">
+                <label>
+                  <span class="sr-only">Reply to support request</span>
+                  <textarea
+                    name="historyReply"
+                    rows="2"
+                    maxlength="500"
+                    placeholder="Add a text reply…"
+                    [ngModel]="historyReply()"
+                    (ngModelChange)="historyReply.set($event)"
+                  ></textarea>
+                </label>
+                <button
+                  class="button small"
+                  type="submit"
+                  [disabled]="!historyReply().trim() || chat.sending()"
+                >
+                  Send reply
+                </button>
+              </form>
+            } @else {
+              <p class="hint">This request is {{ statusText(detail.ticket.status) }} (read-only).</p>
+            }
+          </div>
+        }
+      </aside>
+    </div>
+  }
+</main>

@@ -88,6 +88,11 @@ export const routes: Routes = [
   { path: 'terms', loadComponent: journey, data: { view: 'terms' }, title: 'Terms | Forum Labs' },
   { path: 'help', loadComponent: journey, data: { view: 'help' }, title: 'Help | Forum Labs' },
   {
+    path: 'chat',
+    loadComponent: () => import('./pages/support-chat').then((m) => m.SupportChat),
+    title: 'Support chat | Forum Labs',
+  },
+  {
     path: '**',
     loadComponent: journey,
     data: { view: 'not-found' },
