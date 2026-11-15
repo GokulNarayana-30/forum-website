@@ -30,6 +30,8 @@ interface Outcome {
 interface Profile extends Person {
   email?: string;
   phone?: string;
+  /** True when Supabase confirmed this same number by code (read by the API). */
+  mobile_verified?: boolean;
   patient_id?: string;
   account_status?: string;
 }
@@ -400,6 +402,45 @@ export class WebsiteStore {
   }
   consumeSignInReturn(): SafeSignInReturn | null {
     return this.api.consumeSignInReturn();
+  }
+  /** A signed-in account with no name yet (a new account): shown My details once after sign-in. */
+  needsDetails(): boolean {
+    const p = this.profile();
+    return !this.preview() && this.signedIn() && !!p && !(p.name ?? '').trim();
+  }
+  /** Checkout needs a mobile Supabase confirmed by code (live mode only; preview has none). */
+  needsVerifiedMobile(): boolean {
+    const p = this.profile();
+    return !this.preview() && this.signedIn() && !!p && !p.mobile_verified;
+  }
+  /** Mobile sign-in, step 1. The terms box must be ticked, as for Google. */
+  async sendSignInCode(phone: string): Promise<boolean> {
+    if (!this.terms()) {
+      this.error.set('Please accept the terms and privacy notice to continue.');
+      return false;
+    }
+    return this.run(() => this.api.sendPhoneOtp(phone));
+  }
+  /** Mobile sign-in, step 2: signs in, records the terms and loads the account, as Google sign-in does. */
+  async verifySignInCode(phone: string, code: string): Promise<boolean> {
+    return this.run(async () => {
+      await this.api.verifyPhoneOtp(phone, code);
+      await this.api.request('/me/consents/terms', 'PUT', { text_version: 'terms-2026-10-draft' });
+      await this.loadAccount();
+    });
+  }
+  /** Verifying the mobile of a signed-in account, step 1: texts a code. */
+  async sendMobileCode(phone: string): Promise<boolean> {
+    return this.run(() => this.api.requestPhoneChange(phone));
+  }
+  /** Step 2: a right code confirms the number; it is then saved on the profile, where it reads as verified. */
+  async confirmMobileCode(phone: string, code: string): Promise<boolean> {
+    return this.run(async () => {
+      await this.api.verifyPhoneChange(phone, code);
+      await this.api.request('/me/mobile', 'PUT', { phone });
+      await this.loadAccount();
+      this.message.set('Mobile number verified.');
+    });
   }
   private async loadAccount(): Promise<void> {
     const p = await this.api.request<Profile>('/me');

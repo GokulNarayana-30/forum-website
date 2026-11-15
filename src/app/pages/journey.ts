@@ -30,9 +30,10 @@ import {
 import { Summary } from './summary';
 import { BookingStatus } from './booking-status';
 import { Account } from './account';
+import { PhoneCode } from './phone-code';
 @Component({
   selector: 'forum-journey',
-  imports: [FormsModule, RouterLink, Summary, BookingStatus, Account],
+  imports: [FormsModule, RouterLink, Summary, BookingStatus, Account, PhoneCode],
   templateUrl: './journey.html',
   styleUrl: './journey.scss',
 })
@@ -161,7 +162,18 @@ export class Journey {
   protected async signIn(): Promise<void> {
     const next = this.nextReturn();
     await this.store.signIn(next);
-    if (this.store.signedIn()) await this.router.navigateByUrl(next ?? '/checkout');
+    if (this.store.signedIn()) await this.afterSignIn();
+  }
+  /** After a mobile or sample sign-in: a new account adds its details first, then the visitor goes on. */
+  protected async afterSignIn(): Promise<void> {
+    if (this.store.needsDetails()) {
+      this.store.message.set(
+        'Welcome! Add your name and details to finish setting up your account.',
+      );
+      await this.router.navigateByUrl('/account');
+      return;
+    }
+    await this.router.navigateByUrl(this.nextReturn() ?? '/checkout');
   }
   protected async place(): Promise<void> {
     const ok = await this.store.place();

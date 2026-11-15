@@ -370,8 +370,16 @@
             <a routerLink="/privacy">privacy notice</a>.</span
           ></label
         ><button class="button full" [disabled]="store.busy() || !store.ready()" (click)="signIn()">
-          {{ store.preview() ? 'Continue with sample account' : 'Continue with Google' }} →</button
-        ><a class="text-link" routerLink="/tests">Continue browsing as a guest</a>
+          {{ store.preview() ? 'Continue with sample account' : 'Continue with Google' }} →
+        </button>
+        @if (!store.preview()) {
+          <div class="subtle panel">
+            <strong>Or sign in with your mobile number</strong>
+            <p>We’ll text you a 6-digit code.</p>
+            <app-phone-code mode="sign-in" (done)="afterSignIn()" />
+          </div>
+        }
+        <a class="text-link" routerLink="/tests">Continue browsing as a guest</a>
       </section>
     }
     @case ('callback') {
@@ -420,268 +428,281 @@
             </button>
           </div>
         }
-        <div class="checkout-layout">
+        @if (store.needsVerifiedMobile()) {
           <section class="panel">
-            <p class="eyebrow">STEP {{ store.step() + 1 }} OF 6</p>
-            <h2 id="checkout-step-heading" tabindex="-1">{{ steps[store.step()] }}</h2>
-            @switch (store.step()) {
-              @case (0) {
-                <p class="lead small-lead">Who are these tests for?</p>
-                @for (line of store.lines(); track line.id) {
-                  <div class="patient-line">
-                    <h3>{{ line.item_name }}</h3>
-                    <label
-                      >Patient<select
-                        [disabled]="!store.canEdit()"
-                        [ngModel]="line.person_id"
-                        (ngModelChange)="store.assign(line, $event)"
+            <h2 id="checkout-step-heading" tabindex="-1">Verify your mobile number</h2>
+            <p>
+              We use it to reach you about your home collection. We’ll text a 6-digit code to check
+              it’s yours.
+            </p>
+            <app-phone-code mode="verify" [initialNumber]="store.profile()?.phone" />
+          </section>
+        } @else {
+          <div class="checkout-layout">
+            <section class="panel">
+              <p class="eyebrow">STEP {{ store.step() + 1 }} OF 6</p>
+              <h2 id="checkout-step-heading" tabindex="-1">{{ steps[store.step()] }}</h2>
+              @switch (store.step()) {
+                @case (0) {
+                  <p class="lead small-lead">Who are these tests for?</p>
+                  @for (line of store.lines(); track line.id) {
+                    <div class="patient-line">
+                      <h3>{{ line.item_name }}</h3>
+                      <label
+                        >Patient<select
+                          [disabled]="!store.canEdit()"
+                          [ngModel]="line.person_id"
+                          (ngModelChange)="store.assign(line, $event)"
+                        >
+                          @for (person of store.people(); track person.id) {
+                            <option [value]="person.id">
+                              {{ person.name || 'Me' }} ({{ person.relation }})
+                            </option>
+                          }
+                        </select></label
                       >
-                        @for (person of store.people(); track person.id) {
-                          <option [value]="person.id">
-                            {{ person.name || 'Me' }} ({{ person.relation }})
-                          </option>
-                        }
-                      </select></label
-                    >
-                  </div>
-                }
-                @for (issue of store.snapshot()?.issues ?? []; track $index) {
-                  <p class="inline-error">
-                    This cart needs attention: {{ issue.kind.replaceAll('_', ' ') }}. Complete
-                    patient details in Account or change the selection.
-                  </p>
-                }
-                <a class="text-link" routerLink="/account">Manage patient details & family →</a>
-              }
-              @case (1) {
-                <p class="lead small-lead">Where should we collect?</p>
-                <div class="address-list">
-                  @for (address of store.addresses(); track address.id) {
-                    <button
-                      class="choice"
-                      [class.chosen]="store.address()?.id === address.id"
-                      [disabled]="!store.canEdit()"
-                      [attr.aria-pressed]="store.address()?.id === address.id"
-                      (click)="store.chooseAddress(address.id)"
-                    >
-                      <strong>{{ address.type }}</strong
-                      ><span>{{ address.house }}, {{ address.street }} {{ address.area }}</span
-                      ><span>{{ address.pincode }}</span>
-                    </button>
-                  } @empty {
-                    <p>No saved addresses yet. Add an address in Account.</p>
+                    </div>
                   }
-                </div>
-                <p class="hint">Changing the address clears the previous collection slot.</p>
-                <a class="text-link" routerLink="/account">Manage saved addresses →</a>
-              }
-              @case (2) {
-                <p class="lead small-lead">Choose a collection time.</p>
-                @if (store.preview()) {
-                  <p class="notice-box">These are fixed example slots, not real availability.</p>
+                  @for (issue of store.snapshot()?.issues ?? []; track $index) {
+                    <p class="inline-error">
+                      This cart needs attention: {{ issue.kind.replaceAll('_', ' ') }}. Complete
+                      patient details in Account or change the selection.
+                    </p>
+                  }
+                  <a class="text-link" routerLink="/account">Manage patient details & family →</a>
                 }
-                @if (!store.address()) {
-                  <p>Choose a collection address in the previous step first.</p>
-                }
-                @for (day of store.days(); track day.day_key) {
-                  <h3 class="slot-day">{{ day.day_key }}</h3>
-                  <div class="slot-list">
-                    @for (slot of day.slots; track slot.id) {
+                @case (1) {
+                  <p class="lead small-lead">Where should we collect?</p>
+                  <div class="address-list">
+                    @for (address of store.addresses(); track address.id) {
                       <button
                         class="choice"
-                        [disabled]="!store.canEdit() || slot.capacity_left < 1"
-                        [class.chosen]="store.slot()?.id === slot.id"
-                        [attr.aria-pressed]="store.slot()?.id === slot.id"
-                        (click)="store.chooseSlot(slot)"
+                        [class.chosen]="store.address()?.id === address.id"
+                        [disabled]="!store.canEdit()"
+                        [attr.aria-pressed]="store.address()?.id === address.id"
+                        (click)="store.chooseAddress(address.id)"
                       >
-                        <strong>{{ instant(slot.starts_at) }}</strong
-                        ><span>Until {{ instant(slot.ends_at) }}</span
-                        ><span>{{
-                          slot.capacity_left < 1
-                            ? 'Full'
-                            : slot.capacity_left === 1
-                              ? '1 place left'
-                              : 'Available'
-                        }}</span>
-                        @if (slot.best_for_fasting) {
-                          <span>Best for fasting tests</span>
-                        }
+                        <strong>{{ address.type }}</strong
+                        ><span>{{ address.house }}, {{ address.street }} {{ address.area }}</span
+                        ><span>{{ address.pincode }}</span>
                       </button>
+                    } @empty {
+                      <p>No saved addresses yet. Add an address in Account.</p>
                     }
                   </div>
-                } @empty {
-                  <p>
-                    No collection times are available for this address. Choose another address or
-                    try again later.
-                  </p>
+                  <p class="hint">Changing the address clears the previous collection slot.</p>
+                  <a class="text-link" routerLink="/account">Manage saved addresses →</a>
                 }
-                @if (store.slot()) {
-                  <p class="hint">
-                    {{
-                      store.preview()
-                        ? 'Sample slot selected.'
-                        : 'Your slot is temporarily held. If it expires, choose a slot again.'
-                    }}
-                  </p>
-                }
-              }
-              @case (3) {
-                <p class="lead small-lead">A little preparation helps.</p>
-                @if (store.preview()) {
-                  <p>
-                    Preparation in this preview is not confirmed medical advice. Live instructions
-                    will be combined by the server for your selected tests.
-                  </p>
-                } @else {
-                  @for (
-                    instruction of store.snapshot()?.preparation?.instructions ?? [];
-                    track instruction
-                  ) {
-                    <p class="preparation-item">{{ instruction }}</p>
+                @case (2) {
+                  <p class="lead small-lead">Choose a collection time.</p>
+                  @if (store.preview()) {
+                    <p class="notice-box">These are fixed example slots, not real availability.</p>
                   }
-                  @if (store.snapshot()?.preparation?.confirmation_pending) {
-                    <p>
-                      Some preparation instructions need confirmation from the lab when you book.
-                    </p>
+                  @if (!store.address()) {
+                    <p>Choose a collection address in the previous step first.</p>
                   }
-                }
-                <p class="notice-box">
-                  Confirm fasting instructions with the lab. Do not change prescribed medicines
-                  without your clinician’s advice.
-                </p>
-                <label class="check"
-                  ><input
-                    type="checkbox"
-                    [disabled]="!store.canEdit()"
-                    [ngModel]="store.preparationRead()"
-                    (ngModelChange)="store.preparationRead.set($event)"
-                  /><span>I have read the preparation information.</span></label
-                >
-              }
-              @case (4) {
-                <p class="lead small-lead">Have a coupon?</p>
-                <p>Apply a coupon or continue without one.</p>
-                <form class="coupon-form" (ngSubmit)="store.coupon(couponCode)">
-                  <label
-                    >Coupon code<input
-                      name="coupon"
-                      [(ngModel)]="couponCode"
-                      placeholder="Enter code"
-                      maxlength="64" /></label
-                  ><button
-                    class="button outline"
-                    [disabled]="!store.canEdit() || !couponCode.trim()"
-                  >
-                    Apply
-                  </button>
-                </form>
-                @if (store.quote()?.applied_coupon; as coupon) {
-                  <div class="notice-box">
-                    {{ coupon.code }} applied · {{ money(coupon.saving_paise) }} saving
-                    <button
-                      class="text-link"
-                      [disabled]="!store.canEdit()"
-                      (click)="store.coupon('')"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                }
-                <p class="hint">Coupon conditions and discounts are checked by the server.</p>
-              }
-              @case (5) {
-                <p class="lead small-lead">One last look.</p>
-                <div class="review-block">
-                  <h3>Patients & tests</h3>
-                  @for (line of store.lines(); track line.id) {
-                    <p>
-                      {{ line.item_name }} —
-                      @for (person of store.people(); track person.id) {
-                        @if (person.id === line.person_id) {
-                          <strong>{{ person.name || 'Me' }}</strong>
-                        }
+                  @for (day of store.days(); track day.day_key) {
+                    <h3 class="slot-day">{{ day.day_key }}</h3>
+                    <div class="slot-list">
+                      @for (slot of day.slots; track slot.id) {
+                        <button
+                          class="choice"
+                          [disabled]="!store.canEdit() || slot.capacity_left < 1"
+                          [class.chosen]="store.slot()?.id === slot.id"
+                          [attr.aria-pressed]="store.slot()?.id === slot.id"
+                          (click)="store.chooseSlot(slot)"
+                        >
+                          <strong>{{ instant(slot.starts_at) }}</strong
+                          ><span>Until {{ instant(slot.ends_at) }}</span
+                          ><span>{{
+                            slot.capacity_left < 1
+                              ? 'Full'
+                              : slot.capacity_left === 1
+                                ? '1 place left'
+                                : 'Available'
+                          }}</span>
+                          @if (slot.best_for_fasting) {
+                            <span>Best for fasting tests</span>
+                          }
+                        </button>
                       }
+                    </div>
+                  } @empty {
+                    <p>
+                      No collection times are available for this address. Choose another address or
+                      try again later.
                     </p>
                   }
-                </div>
-                <div class="review-block">
-                  <h3>Collection address</h3>
-                  <p>
-                    {{ store.address()?.house }}, {{ store.address()?.area }} ·
-                    {{ store.address()?.pincode }}
-                  </p>
-                </div>
-                <div class="review-block">
-                  <h3>Collection time</h3>
-                  <p>{{ instant(store.slot()?.starts_at) }}</p>
-                </div>
-                <div class="review-block">
-                  <h3>Payment & cancellation</h3>
-                  <p>Pay by cash or UPI to the phlebotomist at collection.</p>
-                  <p>
-                    {{
-                      store.preview()
-                        ? 'Cancellation and rescheduling rules are confirmed by Forum for live bookings.'
-                        : store.policy()
-                    }}
-                  </p>
-                </div>
-                @if (store.priceChanged()) {
-                  <div class="notice-box">
-                    <p>Your total has changed. Review the summary and accept it before booking.</p>
-                    <button
-                      class="button outline"
-                      [disabled]="store.busy()"
-                      (click)="store.acceptPrice()"
-                    >
-                      Accept updated total
-                    </button>
-                  </div>
+                  @if (store.slot()) {
+                    <p class="hint">
+                      {{
+                        store.preview()
+                          ? 'Sample slot selected.'
+                          : 'Your slot is temporarily held. If it expires, choose a slot again.'
+                      }}
+                    </p>
+                  }
                 }
-                <label class="check"
-                  ><input
-                    type="checkbox"
-                    [disabled]="!store.canEdit()"
-                    [ngModel]="store.consent()"
-                    (ngModelChange)="store.setConsent($event)"
-                  /><span
-                    >I consent to the selected diagnostic tests and home sample collection for the
-                    listed patients, and confirm I am authorised to book for them. I have read the
-                    preparation information and <a routerLink="/privacy">privacy notice</a>.</span
-                  ></label
-                >
-                <p class="hint">
-                  Marketing consent is optional and is not requested with this booking.
-                </p>
+                @case (3) {
+                  <p class="lead small-lead">A little preparation helps.</p>
+                  @if (store.preview()) {
+                    <p>
+                      Preparation in this preview is not confirmed medical advice. Live instructions
+                      will be combined by the server for your selected tests.
+                    </p>
+                  } @else {
+                    @for (
+                      instruction of store.snapshot()?.preparation?.instructions ?? [];
+                      track instruction
+                    ) {
+                      <p class="preparation-item">{{ instruction }}</p>
+                    }
+                    @if (store.snapshot()?.preparation?.confirmation_pending) {
+                      <p>
+                        Some preparation instructions need confirmation from the lab when you book.
+                      </p>
+                    }
+                  }
+                  <p class="notice-box">
+                    Confirm fasting instructions with the lab. Do not change prescribed medicines
+                    without your clinician’s advice.
+                  </p>
+                  <label class="check"
+                    ><input
+                      type="checkbox"
+                      [disabled]="!store.canEdit()"
+                      [ngModel]="store.preparationRead()"
+                      (ngModelChange)="store.preparationRead.set($event)"
+                    /><span>I have read the preparation information.</span></label
+                  >
+                }
+                @case (4) {
+                  <p class="lead small-lead">Have a coupon?</p>
+                  <p>Apply a coupon or continue without one.</p>
+                  <form class="coupon-form" (ngSubmit)="store.coupon(couponCode)">
+                    <label
+                      >Coupon code<input
+                        name="coupon"
+                        [(ngModel)]="couponCode"
+                        placeholder="Enter code"
+                        maxlength="64" /></label
+                    ><button
+                      class="button outline"
+                      [disabled]="!store.canEdit() || !couponCode.trim()"
+                    >
+                      Apply
+                    </button>
+                  </form>
+                  @if (store.quote()?.applied_coupon; as coupon) {
+                    <div class="notice-box">
+                      {{ coupon.code }} applied · {{ money(coupon.saving_paise) }} saving
+                      <button
+                        class="text-link"
+                        [disabled]="!store.canEdit()"
+                        (click)="store.coupon('')"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  }
+                  <p class="hint">Coupon conditions and discounts are checked by the server.</p>
+                }
+                @case (5) {
+                  <p class="lead small-lead">One last look.</p>
+                  <div class="review-block">
+                    <h3>Patients & tests</h3>
+                    @for (line of store.lines(); track line.id) {
+                      <p>
+                        {{ line.item_name }} —
+                        @for (person of store.people(); track person.id) {
+                          @if (person.id === line.person_id) {
+                            <strong>{{ person.name || 'Me' }}</strong>
+                          }
+                        }
+                      </p>
+                    }
+                  </div>
+                  <div class="review-block">
+                    <h3>Collection address</h3>
+                    <p>
+                      {{ store.address()?.house }}, {{ store.address()?.area }} ·
+                      {{ store.address()?.pincode }}
+                    </p>
+                  </div>
+                  <div class="review-block">
+                    <h3>Collection time</h3>
+                    <p>{{ instant(store.slot()?.starts_at) }}</p>
+                  </div>
+                  <div class="review-block">
+                    <h3>Payment & cancellation</h3>
+                    <p>Pay by cash or UPI to the phlebotomist at collection.</p>
+                    <p>
+                      {{
+                        store.preview()
+                          ? 'Cancellation and rescheduling rules are confirmed by Forum for live bookings.'
+                          : store.policy()
+                      }}
+                    </p>
+                  </div>
+                  @if (store.priceChanged()) {
+                    <div class="notice-box">
+                      <p>
+                        Your total has changed. Review the summary and accept it before booking.
+                      </p>
+                      <button
+                        class="button outline"
+                        [disabled]="store.busy()"
+                        (click)="store.acceptPrice()"
+                      >
+                        Accept updated total
+                      </button>
+                    </div>
+                  }
+                  <label class="check"
+                    ><input
+                      type="checkbox"
+                      [disabled]="!store.canEdit()"
+                      [ngModel]="store.consent()"
+                      (ngModelChange)="store.setConsent($event)"
+                    /><span
+                      >I consent to the selected diagnostic tests and home sample collection for the
+                      listed patients, and confirm I am authorised to book for them. I have read the
+                      preparation information and <a routerLink="/privacy">privacy notice</a>.</span
+                    ></label
+                  >
+                  <p class="hint">
+                    Marketing consent is optional and is not requested with this booking.
+                  </p>
+                }
               }
-            }
-            <div class="actions step-actions">
-              <button
-                class="button outline"
-                [disabled]="!store.canEdit() || store.step() === 0"
-                (click)="back()"
-              >
-                ← Back
-              </button>
-              @if (store.step() < 5) {
-                <button class="button" [disabled]="!store.canEdit()" (click)="next()">
-                  Continue →
-                </button>
-              } @else {
+              <div class="actions step-actions">
                 <button
-                  class="button"
-                  [disabled]="
-                    store.busy() || !store.consent() || store.priceChanged() || !!store.attempt()
-                  "
-                  (click)="place()"
+                  class="button outline"
+                  [disabled]="!store.canEdit() || store.step() === 0"
+                  (click)="back()"
                 >
-                  {{ store.preview() ? 'Finish preview' : 'Confirm booking · Pay at collection' }}
+                  ← Back
                 </button>
-              }
-            </div>
-          </section>
-          <forum-summary />
-        </div>
+                @if (store.step() < 5) {
+                  <button class="button" [disabled]="!store.canEdit()" (click)="next()">
+                    Continue →
+                  </button>
+                } @else {
+                  <button
+                    class="button"
+                    [disabled]="
+                      store.busy() || !store.consent() || store.priceChanged() || !!store.attempt()
+                    "
+                    (click)="place()"
+                  >
+                    {{ store.preview() ? 'Finish preview' : 'Confirm booking · Pay at collection' }}
+                  </button>
+                }
+              </div>
+            </section>
+            <forum-summary />
+          </div>
+        }
       }
     }
     @case ('confirmation') {

@@ -10,6 +10,18 @@ export class WebsiteError extends Error {
     super(message);
   }
 }
+/** What a Supabase Auth phone-code error means to the visitor. */
+export function phoneErrorMessage(code: string, status: number): string {
+  if (code === 'phone_exists')
+    return 'This number is already used by another account. Sign in with it instead.';
+  if (code === 'otp_expired' || code === 'invalid_credentials')
+    return 'That code didn’t match or has expired. Check it or ask for a new one.';
+  if (code.startsWith('over_') || status === 429)
+    return 'Too many codes requested. Please wait a minute and try again.';
+  if (code === 'sms_send_failed' || code === 'hook_timeout' || code === 'unexpected_failure')
+    return 'We couldn’t send the code. Please try again in a minute.';
+  return 'We couldn’t complete that. Please check the number and try again.';
+}
 /**
  * Where Google sends the visitor back to. It follows the page's <base href>, so it is
  * /auth/callback at a domain root and /forum-website/auth/callback on GitHub Pages.
@@ -217,6 +229,76 @@ export class WebsiteApi {
     const target = this.pendingReturnTo;
     this.pendingReturnTo = null;
     return target;
+  }
+  /** Mobile sign-in, step 1: Supabase texts a 6-digit code to [phone] (+91..., through the Send SMS hook). */
+  async sendPhoneOtp(phone: string): Promise<void> {
+    await this.auth('/otp', 'POST', { phone }, false);
+  }
+  /** Mobile sign-in, step 2: a right code signs the visitor in. */
+  async verifyPhoneOtp(phone: string, code: string): Promise<void> {
+    const data = await this.auth('/verify', 'POST', { type: 'sms', phone, token: code }, false);
+    this.adoptSession(data);
+  }
+  /** Mobile verification of a signed-in account (for example Google): Supabase texts a code to [phone]. */
+  async requestPhoneChange(phone: string): Promise<void> {
+    await this.auth('/user', 'PUT', { phone }, true);
+  }
+  /** A right code confirms [phone] on the signed-in account. */
+  async verifyPhoneChange(phone: string, code: string): Promise<void> {
+    const data = await this.auth('/verify', 'POST', { type: 'phone_change', phone, token: code }, true);
+    if (typeof data['access_token'] === 'string') this.adoptSession(data);
+  }
+  private adoptSession(data: Record<string, unknown>): void {
+    const access = data['access_token'];
+    const expires = data['expires_in'];
+    const refresh = data['refresh_token'];
+    if (typeof access !== 'string' || typeof expires !== 'number' || !Number.isFinite(expires))
+      throw new WebsiteError('sign_in');
+    this.adopt(access, expires, typeof refresh === 'string' ? refresh : undefined);
+  }
+  /** One Supabase Auth call; its error code becomes a plain message (never the server's own text). */
+  private async auth(
+    path: string,
+    method: 'POST' | 'PUT',
+    body: unknown,
+    withSession: boolean,
+  ): Promise<Record<string, unknown>> {
+    const c = this.config();
+    if (c.mode !== 'live') throw new WebsiteError('preview');
+    const headers: Record<string, string> = {
+      apikey: c.publishableKey,
+      'Content-Type': 'application/json',
+    };
+    if (withSession) {
+      const token = await this.accessToken();
+      if (!token) throw new WebsiteError('sign_in', 'Please sign in again to continue.');
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    let r: Response;
+    try {
+      r = await fetch(c.supabaseUrl + '/auth/v1' + path, {
+        method,
+        headers,
+        body: JSON.stringify(body),
+        credentials: 'omit',
+        cache: 'no-store',
+        referrerPolicy: 'no-referrer',
+        signal: AbortSignal.timeout(20000),
+      });
+    } catch {
+      throw new WebsiteError('network', 'Connection interrupted. Please try again.');
+    }
+    let data: Record<string, unknown> = {};
+    try {
+      data = (await r.json()) as Record<string, unknown>;
+    } catch {
+      /* an empty answer */
+    }
+    if (!r.ok) {
+      const code = String(data['error_code'] ?? data['code'] ?? data['error'] ?? 'unknown');
+      throw new WebsiteError(code, phoneErrorMessage(code, r.status));
+    }
+    return data;
   }
   /** Brings a session kept by this tab back after a page refresh. True when the visitor is signed in. */
   /** Returns an active access token in live mode, renewing through the stored refresh token when needed. */

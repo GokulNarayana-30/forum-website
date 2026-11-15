@@ -55,7 +55,15 @@ export class App {
       await this.store.initialize(callback);
       if (callback && this.store.signedIn() && this.store.ready()) {
         const returnTo = this.store.consumeSignInReturn() ?? '/cart';
-        await this.router.navigateByUrl(returnTo);
+        if (this.store.needsDetails()) {
+          // A new account adds its details first (the same as the app).
+          this.store.message.set(
+            'Welcome! Add your name and details to finish setting up your account.',
+          );
+          await this.router.navigateByUrl('/account');
+        } else {
+          await this.router.navigateByUrl(returnTo);
+        }
       }
       if (this.chat.canConnectLive()) {
         void this.chat.refreshUnread();
