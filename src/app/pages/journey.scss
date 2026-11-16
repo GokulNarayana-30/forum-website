@@ -249,6 +249,74 @@ s {
 .signin .full {
   margin-bottom: 25px;
 }
+.signin .check {
+  margin-bottom: 24px;
+}
+.google-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  padding: 15px 24px;
+  border: 1px solid var(--outline);
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.google-button:hover:not(:disabled) {
+  background: var(--blush-light);
+  border-color: var(--primary);
+}
+.google-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(113, 78, 160, 0.25);
+}
+.google-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.signin-divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 28px 0 22px;
+  color: var(--body);
+  font-size: 14px;
+}
+.signin-divider::before,
+.signin-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.signin-terms-hint {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--body);
+}
+.signin > .text-link {
+  display: inline-block;
+  margin-top: 26px;
+}
+@media (max-width: 600px) {
+  .signin {
+    padding: 28px 20px;
+    margin: 16px auto;
+  }
+  .signin h1 {
+    font-size: 28px;
+  }
+}
 .signin h1 {
   font-size: 35px;
 }

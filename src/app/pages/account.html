@@ -129,17 +129,11 @@
                       <option value="other">Other</option>
                     </select></label
                   >
-                  <label
-                    >Mobile number<input
-                      name="phone"
-                      type="tel"
-                      [(ngModel)]="profileForm.phone"
-                      required
-                      pattern="\+91[6-9][0-9]{9}"
-                      placeholder="+91"
-                      autocomplete="tel"
-                    /><small>Include +91 before your 10-digit number.</small></label
-                  >
+                  <div class="readonly-field">
+                    <span class="readonly-label">Mobile number</span>
+                    <span>{{ mobileText() }}</span>
+                    <small>Change or verify it from your details page with a code.</small>
+                  </div>
                 </div>
               }
               @case ('family') {
@@ -258,7 +252,10 @@
               <p class="notice-box" role="alert">{{ saveError() }}</p>
             }
             <div class="form-actions">
-              <button class="button" [disabled]="!store.canEdit() || !accountForm.valid">
+              <button
+                class="button"
+                [disabled]="!store.canEdit() || (section() !== 'profile' && !accountForm.valid)"
+              >
                 {{
                   store.busy()
                     ? 'Saving…'
@@ -290,7 +287,36 @@
                 </div>
                 <div>
                   <dt>Mobile number</dt>
-                  <dd>{{ store.profile()?.phone || 'Not added' }}</dd>
+                  <dd>
+                    {{ mobileText() }}
+                    @if (store.profile()?.phone && store.profile()?.mobile_verified) {
+                      <span class="badge verified">Verified</span>
+                    } @else if (!store.preview()) {
+                      <button
+                        type="button"
+                        class="link-button"
+                        [disabled]="store.busy()"
+                        (click)="verifyingMobile.set(!verifyingMobile())"
+                      >
+                        {{
+                          verifyingMobile()
+                            ? 'Cancel'
+                            : store.profile()?.phone
+                              ? 'Verify with a code'
+                              : 'Add and verify'
+                        }}
+                      </button>
+                    }
+                  </dd>
+                  @if (verifyingMobile()) {
+                    <div class="verify-mobile">
+                      <app-phone-code
+                        mode="verify"
+                        [initialNumber]="store.profile()?.phone"
+                        (done)="verifyingMobile.set(false)"
+                      />
+                    </div>
+                  }
                 </div>
                 <div>
                   <dt>Date of birth</dt>

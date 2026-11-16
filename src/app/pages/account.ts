@@ -4,11 +4,19 @@ import { RouterLink } from '@angular/router';
 import { Address } from '../core/models';
 import { WebsiteStore } from '../core/store';
 import { AddressPicker, PickedLocation } from './address-picker';
+import { PhoneCode, displayMobile } from './phone-code';
 
 type Section = 'profile' | 'family' | 'addresses' | 'support';
+/** Form field names as the visitor knows them, for the "Please add ..." message. */
+const FIELD_NAMES: Record<string, string> = {
+  name: 'your full name',
+  dob: 'your date of birth',
+  gender: 'your gender',
+  familyName: 'their full name',
+};
 @Component({
   selector: 'forum-account',
-  imports: [FormsModule, RouterLink, AddressPicker],
+  imports: [FormsModule, RouterLink, AddressPicker, PhoneCode],
   templateUrl: './account.html',
   styleUrl: './account.scss',
 })
@@ -16,6 +24,8 @@ export class Account {
   protected readonly store = inject(WebsiteStore);
   protected readonly section = signal<Section>('profile');
   protected readonly editing = signal(false);
+  /** The verify-by-code step under the mobile number is open. */
+  protected readonly verifyingMobile = signal(false);
   /** The saved address being changed, or null while a new one is added. */
   protected readonly editingAddressId = signal<string | null>(null);
   protected readonly saved = signal('');
@@ -123,18 +133,34 @@ export class Account {
     this.saveError.set('');
     this.editing.set(true);
   }
+  /** The account's mobile, as shown: "+91 98765 43210", or "Not added". */
+  protected mobileText(): string {
+    const phone = this.store.profile()?.phone;
+    return phone ? displayMobile(phone) : 'Not added';
+  }
   protected async save(form: NgForm): Promise<void> {
-    if (!form.valid || this.store.preview() || !this.store.canEdit()) return;
+    if (this.store.preview() || !this.store.canEdit()) return;
+    if (!form.valid) {
+      // Say what is missing instead of a silently disabled button.
+      form.control.markAllAsTouched();
+      const missing = Object.entries(form.controls)
+        .filter(([, control]) => control.invalid)
+        .map(([name]) => FIELD_NAMES[name] ?? 'a required field');
+      this.saveError.set(`Please add ${[...new Set(missing)].join(', ')}.`);
+      return;
+    }
     this.saveError.set('');
     const section = this.section();
     if (section === 'profile') {
       const p = this.profileForm;
-      await this.store.saveProfile(p.name, p.dob, p.gender, p.phone);
+      // The mobile is changed only by code (Verify), never saved from this form.
+      await this.store.saveProfile(p.name, p.dob, p.gender, '');
     } else if (section === 'family') await this.store.addFamily(this.familyForm);
     else if (section === 'addresses') {
       // The pin's coordinates travel only as a pair, and only while the address still matches it.
       const { latitude, longitude, ...address } = this.addressForm;
-      const body = latitude !== null && longitude !== null ? { ...address, latitude, longitude } : address;
+      const body =
+        latitude !== null && longitude !== null ? { ...address, latitude, longitude } : address;
       const id = this.editingAddressId();
       if (id) await this.store.updateAddress(id, body);
       else await this.store.addAddress(body);

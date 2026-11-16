@@ -82,10 +82,28 @@ describe('Customer account sections', () => {
       'Sample customer',
       '1990-01-01',
       'male',
-      '+919876543210',
+      '', // the mobile changes only by code, never from the details form
     );
     expect(root.querySelector('form')).toBeNull();
     expect(root.querySelector('[role="status"]')?.textContent).toContain('have been saved');
+  });
+  it('says what is missing instead of silently refusing to save (mobile browsers)', async () => {
+    const fixture = await render();
+    const root: HTMLElement = fixture.nativeElement;
+    button(root, 'Edit details').click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const name = root.querySelector('[name="name"]') as HTMLInputElement;
+    name.value = '';
+    name.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(button(root, 'Save details').disabled).toBe(false);
+    button(root, 'Save details').click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(store.saveProfile).not.toHaveBeenCalled();
+    expect(root.querySelector('[role="alert"]')?.textContent).toContain('your full name');
+    expect(root.querySelector('[name="phone"]')).toBeNull();
   });
   it('keeps failed input open without showing success', async () => {
     store.saveProfile.mockImplementation(async () => {

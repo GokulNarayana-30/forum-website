@@ -371,3 +371,48 @@ dd {
     grid-template-columns: 1fr;
   }
 }
+
+/* Mobile number: read-only in the details form; verified by code from the details view. */
+.readonly-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.readonly-label {
+  font-weight: 600;
+}
+.readonly-field small {
+  color: var(--body);
+}
+.badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  vertical-align: middle;
+}
+.badge.verified {
+  background: #e7f6ec;
+  color: #1a7f37;
+}
+.link-button {
+  margin-left: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.link-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.verify-mobile {
+  margin-top: 14px;
+  max-width: 420px;
+}
