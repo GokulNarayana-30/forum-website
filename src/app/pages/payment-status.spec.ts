@@ -148,6 +148,28 @@ describe('Website payment return', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Skip email');
   });
 
+  // Owner, 2026-11-21: a manual check whose answer is unchanged looked like nothing happened.
+  it('shows Checking… while a manual check runs, then when it was checked', async () => {
+    read.mockResolvedValue({ ...status, payment_state: 'retryable', can_retry: true, can_switch: false });
+    const fixture = mount();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    let answer!: (value: unknown) => void;
+    read.mockReturnValueOnce(new Promise((resolve) => { answer = resolve; }));
+    const check = () => [...(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)]
+      .find((button) => /Check status|Checking/.test(button.textContent ?? ''))!;
+    check().click();
+    fixture.detectChanges();
+    expect(check().textContent).toContain('Checking…');
+    expect(check().disabled).toBe(true);
+    answer({ ...status, payment_state: 'retryable', can_retry: true, can_switch: false });
+    await fixture.whenStable();
+    await new Promise((resolve) => setTimeout(resolve));
+    fixture.detectChanges();
+    expect(check().textContent).toContain('Check status');
+    expect(fixture.nativeElement.textContent).toMatch(/Checked at .+ IST\. No change yet\./);
+  });
+
   it('names an unfinished payment plainly and offers the retry', async () => {
     read.mockResolvedValue({ ...status, payment_state: 'retryable', can_retry: true, can_switch: true });
     const fixture = mount();

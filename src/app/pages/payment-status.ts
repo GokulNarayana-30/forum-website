@@ -157,8 +157,13 @@ const POLL_MS = 3000;
               <a class="button outline" routerLink="/tests">Book another test</a>
             }
           } @else {
-            <button class="button outline" type="button" [disabled]="acting()" (click)="refresh()">
-              Check status
+            <button
+              class="button outline"
+              type="button"
+              [disabled]="acting() || checkingNow()"
+              (click)="refresh()"
+            >
+              {{ checkingNow() ? 'Checking…' : 'Check status' }}
             </button>
             @if (!embedded()) {
               <a class="text-link" routerLink="/bookings">My bookings</a>
@@ -332,6 +337,8 @@ export class PaymentStatus {
   /** Inside a booking card (an order id input) the page stays compact: no icon, no details block. */
   protected readonly embedded = computed(() => !!this.orderId());
   protected readonly booking = signal<Order | null>(null);
+  /** A manual "Check status" in flight; the answer may well be unchanged, so say when it was checked. */
+  protected readonly checkingNow = signal(false);
   protected readonly tone = computed(() => {
     switch (this.status()?.payment_state) {
       case 'paid':
@@ -432,6 +439,7 @@ export class PaymentStatus {
         this.stop();
         this.status.set(null);
         this.booking.set(null);
+        this.checkingNow.set(false);
         this.email.set('');
         this.message.set('');
         this.rebook.set(false);
@@ -501,7 +509,7 @@ export class PaymentStatus {
     }
   }
 
-  protected refresh(): void {
+  protected async refresh(): Promise<void> {
     const id = this.activeId(),
       owner = this.store.profile()?.id;
     if (
@@ -514,7 +522,24 @@ export class PaymentStatus {
       return;
     this.stop();
     this.message.set('');
-    void this.read(id, owner, this.generation, MAX_CHECKS);
+    const before = this.status()?.payment_state;
+    const generation = this.generation;
+    this.checkingNow.set(true);
+    try {
+      await this.read(id, owner, generation, MAX_CHECKS);
+    } finally {
+      if (generation === this.generation) this.checkingNow.set(false);
+    }
+    if (!this.current(id, owner, generation) || this.message()) return;
+    if (this.status()?.payment_state === before) {
+      const time = new Intl.DateTimeFormat('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      }).format(Date.now());
+      this.message.set(`Checked at ${time} IST. No change yet.`);
+    }
   }
 
   private showFeedback(kind: PayuLaunch): void {
