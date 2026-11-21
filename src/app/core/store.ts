@@ -986,11 +986,17 @@ export class WebsiteStore {
   async paymentRefund(
     orderId: string,
   ): Promise<Pick<Order, 'refund' | 'status' | 'payment_status'> | null> {
+    const result = await this.paymentBooking(orderId);
+    return result && { refund: result.refund, status: result.status, payment_status: result.payment_status };
+  }
+
+  /** The signed-in owner's booking behind a payment, for the result page; null for anyone else. */
+  async paymentBooking(orderId: string): Promise<Order | null> {
     const path = this.payuPath(orderId);
     const owner = this.profile()?.id ?? '';
     const result = await this.api.request<Order>(path.slice(0, -'/payu'.length));
     if (!this.isPaymentOwner(owner) || result?.id !== paymentOrderId(orderId)) return null;
-    return { refund: result.refund, status: result.status, payment_status: result.payment_status };
+    return result;
   }
 
   async startPayu(orderId: string, email = ''): Promise<PayuLaunch> {

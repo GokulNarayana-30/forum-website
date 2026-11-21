@@ -17,10 +17,11 @@ const status = {
 
 describe('Website payment return', () => {
   let read: ReturnType<typeof vi.fn>;
+  let booking: ReturnType<typeof vi.fn>;
   let switchPayu: ReturnType<typeof vi.fn>;
   const signedIn = signal(true);
   const profile = signal<{ id: string } | null>({ id: 'owner-one' });
-  function mount({ platform = 'browser', id = orderId } = {}) {
+  function mount({ platform = 'browser', id = orderId, embedded = false } = {}) {
     TestBed.configureTestingModule({
       imports: [PaymentStatus],
       providers: [
@@ -41,12 +42,14 @@ describe('Website payment return', () => {
             preview: signal(false),
             initialPayuFeedback: signal(null),
             paymentStatus: read,
+            paymentBooking: booking,
             switchPayu,
           },
         },
       ],
     });
     const fixture = TestBed.createComponent(PaymentStatus);
+    if (embedded) fixture.componentRef.setInput('orderId', id);
     fixture.detectChanges();
     return fixture;
   }
@@ -55,6 +58,14 @@ describe('Website payment return', () => {
     signedIn.set(true);
     profile.set({ id: 'owner-one' });
     read = vi.fn().mockResolvedValue(status);
+    booking = vi.fn().mockResolvedValue({
+      booking_ref: 'FL-2026-000022',
+      total_paise: 45000,
+      slot_starts_at: '2026-11-22T07:00:00+05:30',
+      slot_ends_at: '2026-11-22T08:00:00+05:30',
+      patients: [{ id: 'p1', first_name: 'Asha', relation: 'self' }],
+      lines: [{ test_name: 'Complete Haemogram', amount_paise: 45000 }],
+    });
     switchPayu = vi.fn().mockResolvedValue('payu_checkout_pending');
   });
   afterEach(() => TestBed.resetTestingModule());
@@ -148,6 +159,59 @@ describe('Website payment return', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  // Owner, 2026-11-21: the result page is a proper confirmation, not a bare heading.
+  it('confirms a paid booking with its details and the next steps', async () => {
+    const fixture = mount();
+    await fixture.whenStable();
+    // The booking details load just after the status answer.
+    await new Promise((resolve) => setTimeout(resolve));
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const text = el.textContent ?? '';
+    expect(text).toContain('Payment confirmed');
+    expect(text).toContain('Your home collection is booked and paid');
+    expect(text).toContain('FL-2026-000022');
+    expect(text).toContain('₹450.00');
+    expect(text).toContain('Complete Haemogram');
+    expect(text).toContain('Asha');
+    expect(text).toContain('7:00 – 8:00 am');
+    expect(el.querySelector('.pay-icon.success')).not.toBeNull();
+    expect(el.querySelector('a[href="/bookings"]')?.textContent).toContain('View my bookings');
+    expect(el.querySelector('a[href="/tests"]')?.textContent).toContain('Book another test');
+    expect(text).not.toContain('Check status');
+  });
+
+  it('shows the amount and reference while processing', async () => {
+    read.mockResolvedValue({ ...status, payment_state: 'checking', can_retry: false, can_switch: false });
+    const fixture = mount();
+    await fixture.whenStable();
+    // The booking details load just after the status answer.
+    await new Promise((resolve) => setTimeout(resolve));
+    fixture.detectChanges();
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('FL-2026-000022');
+    expect(text).toContain('₹450.00');
+    expect(fixture.nativeElement.querySelector('.pay-icon.processing')).not.toBeNull();
+  });
+
+  it('offers no switch to pay at collection while the payment is being confirmed', async () => {
+    read.mockResolvedValue({ ...status, payment_state: 'checking', can_retry: false, can_switch: true });
+    const fixture = mount();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const buttons = [...(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)];
+    expect(buttons.some((button) => button.textContent?.includes('Pay at collection'))).toBe(false);
+  });
+
+  it('stays compact inside a booking card: no details block and no booking read', async () => {
+    const fixture = mount({ embedded: true });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Payment confirmed');
+    expect(fixture.nativeElement.querySelector('.pay-details')).toBeNull();
+    expect(booking).not.toHaveBeenCalled();
   });
 
   it('bounds polling and removes the timer on teardown', async () => {
