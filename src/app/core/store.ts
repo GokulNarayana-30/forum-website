@@ -17,6 +17,7 @@ import {
   Item,
   Line,
   Order,
+  CHECKOUT_STEP,
   PaymentChoice,
   PaymentStatusView,
   PayuLaunch,
@@ -163,7 +164,7 @@ export class WebsiteStore {
     this.onlinePaymentEnabled.set(false);
     this.preferredPayment.set('payu');
     this.attempt.set(null);
-    this.step.set(0);
+    this.step.set(CHECKOUT_STEP.people);
     this.consent.set(false);
   }
   async run(action: () => Promise<void>): Promise<boolean> {
@@ -562,7 +563,7 @@ export class WebsiteStore {
     this.onlinePaymentEnabled.set(false);
     this.preferredPayment.set('payu');
     this.attempt.set(null);
-    this.step.set(0);
+    this.step.set(CHECKOUT_STEP.people);
     this.consent.set(false);
     this.terms.set(false);
     this.error.set('');
@@ -663,31 +664,35 @@ export class WebsiteStore {
   async next(): Promise<boolean> {
     if (this.busy() || this.attempt()) return false;
     const index = this.step();
-    if (index === 0 && (!this.lines().length || this.hasIssues())) {
-      this.error.set('Resolve the cart warnings before continuing.');
-      return false;
+    if (index === CHECKOUT_STEP.people) {
+      if (!this.lines().length || this.hasIssues()) {
+        this.error.set('Resolve the cart warnings before continuing.');
+        return false;
+      }
+      if (!this.address() || !this.days().some((d) => d.slots.length)) {
+        this.error.set('Choose an address with collection availability.');
+        return false;
+      }
     }
-    if (index === 1 && (!this.address() || !this.days().some((d) => d.slots.length))) {
-      this.error.set('Choose an address with collection availability.');
-      return false;
-    }
-    if (index === 2 && (!this.slot() || !this.held())) {
-      this.error.set('Choose an available collection slot.');
-      return false;
-    }
-    if (index === 3 && !this.preparationRead()) {
-      this.error.set('Please confirm you have read the preparation instructions.');
-      return false;
-    }
-    if (index === 4 && !this.preview()) {
-      const ok = await this.run(async () => {
-        await this.refreshCart();
-        await this.refreshPaymentPolicy();
-      });
-      if (!ok) return false;
+    if (index === CHECKOUT_STEP.slot) {
+      if (!this.slot() || !this.held()) {
+        this.error.set('Choose an available collection slot.');
+        return false;
+      }
+      if (!this.preparationRead()) {
+        this.error.set('Please confirm you have read the preparation instructions.');
+        return false;
+      }
+      if (!this.preview()) {
+        const ok = await this.run(async () => {
+          await this.refreshCart();
+          await this.refreshPaymentPolicy();
+        });
+        if (!ok) return false;
+      }
     }
     this.error.set('');
-    this.step.set(Math.min(5, index + 1));
+    this.step.set(Math.min(CHECKOUT_STEP.review, index + 1));
     return true;
   }
   back(): void {
@@ -787,7 +792,7 @@ export class WebsiteStore {
           await this.refreshCart();
           this.consent.set(false);
           this.held.set(false);
-          this.step.set(2);
+          this.step.set(CHECKOUT_STEP.slot);
           throw new WebsiteError(
             'expired',
             'Your quote or slot hold has expired. Choose a slot again and review the current total.',
@@ -875,7 +880,7 @@ export class WebsiteStore {
       if (result.kind === 'slot_unavailable') {
         this.slot.set(null);
         this.held.set(false);
-        this.step.set(2);
+        this.step.set(CHECKOUT_STEP.slot);
       }
       const refusal: Record<string, string> = {
         slot_unavailable: 'Your selected slot is no longer available. Choose another time.',
@@ -919,7 +924,7 @@ export class WebsiteStore {
     this.quote.set(null);
     this.snapshot.set(null);
     this.clearAttempt();
-    this.step.set(0);
+    this.step.set(CHECKOUT_STEP.people);
     this.slot.set(null);
     this.address.set(null);
     this.held.set(false);

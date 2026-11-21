@@ -26,6 +26,11 @@ import {
   itemPrice,
   money,
   steps,
+  CHECKOUT_STEP,
+  groupSlotsByPeriod,
+  istDayKey,
+  slotDayLabel,
+  slotTimeRange,
 } from '../core/models';
 import { Summary } from './summary';
 import { BookingStatus } from './booking-status';
@@ -66,6 +71,28 @@ export class Journey {
   protected readonly itemImage = itemImage;
   protected readonly itemPrice = itemPrice;
   protected readonly steps = steps;
+  protected readonly STEP = CHECKOUT_STEP;
+  protected readonly slotTimeRange = slotTimeRange;
+  /** The day tab the customer picked; until then the held slot's day or the first day with open times. */
+  protected readonly chosenDay = signal<string | null>(null);
+  protected readonly slotDays = computed(() => {
+    const today = istDayKey(Date.now());
+    return this.store.days().map((day) => ({
+      key: day.day_key,
+      ...slotDayLabel(day.day_key, today),
+      open: day.slots.filter((slot) => slot.capacity_left > 0).length,
+      groups: groupSlotsByPeriod(day.slots),
+    }));
+  });
+  protected readonly activeDay = computed(() => {
+    const days = this.slotDays();
+    const held = this.store.slot();
+    const heldDay = held
+      ? days.find((day) => day.groups.some((group) => group.slots.some((slot) => slot.id === held.id)))?.key
+      : undefined;
+    const key = this.chosenDay() ?? heldDay;
+    return days.find((day) => day.key === key) ?? days.find((day) => day.open > 0) ?? days[0] ?? null;
+  });
   protected couponCode = '';
   protected paymentEmail = '';
   protected readonly selectedOrder = signal<Order | null>(null);

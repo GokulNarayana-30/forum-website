@@ -3,7 +3,7 @@ import { signal } from '@angular/core';
 import { WebsiteStore } from './store';
 import { WebsiteApi, WebsiteError } from './api';
 import { WebsiteClock } from './clock';
-import { Config, Order } from './models';
+import { CHECKOUT_STEP, Config, Order, steps } from './models';
 
 describe('Customer website booking boundaries', () => {
   const now = Date.parse('2026-11-02T06:00:00Z');
@@ -132,13 +132,35 @@ describe('Customer website booking boundaries', () => {
     expect(store.held()).toBe(false);
     expect(store.consent()).toBe(false);
   });
-  it('cannot leave address or preparation steps without their prerequisites', async () => {
-    store.step.set(1);
+  it('has three steps: patients & address, slot & preparation, coupon & review', () => {
+    expect(steps).toEqual(['Patients & address', 'Slot & preparation', 'Coupon & review']);
+    expect(CHECKOUT_STEP).toEqual({ people: 0, slot: 1, review: 2 });
+  });
+  it('leaves patients & address only with an address that has collection times', async () => {
+    store.terms.set(true);
+    await store.signIn();
+    await store.add(store.items()[0]);
     expect(await store.next()).toBe(false);
-    expect(store.step()).toBe(1);
-    store.step.set(3);
+    expect(store.step()).toBe(CHECKOUT_STEP.people);
+    await store.chooseAddress('sample-home');
+    expect(await store.next()).toBe(true);
+    expect(store.step()).toBe(CHECKOUT_STEP.slot);
+  });
+  it('leaves slot & preparation only with a held slot and the preparation read', async () => {
+    store.terms.set(true);
+    await store.signIn();
+    await store.add(store.items()[0]);
+    await store.chooseAddress('sample-home');
+    store.step.set(CHECKOUT_STEP.slot);
     expect(await store.next()).toBe(false);
-    expect(store.step()).toBe(3);
+    await store.chooseSlot(store.days()[0].slots[0]);
+    expect(await store.next()).toBe(false);
+    expect(store.step()).toBe(CHECKOUT_STEP.slot);
+    store.preparationRead.set(true);
+    expect(await store.next()).toBe(true);
+    expect(store.step()).toBe(CHECKOUT_STEP.review);
+    expect(await store.next()).toBe(true);
+    expect(store.step()).toBe(CHECKOUT_STEP.review);
   });
   it('places a live booking using server quote IDs and total, never client amounts', async () => {
     liveCheckout();
@@ -308,7 +330,7 @@ describe('Customer website booking boundaries', () => {
     });
     expect(await store.place()).toBe(false);
     expect(api.request.mock.calls.some((c) => c[1] === 'POST')).toBe(false);
-    expect(store.step()).toBe(2);
+    expect(store.step()).toBe(CHECKOUT_STEP.slot);
   });
   it('never labels a slot refusal as a confirmed booking', async () => {
     liveCheckout();
@@ -316,7 +338,7 @@ describe('Customer website booking boundaries', () => {
     expect(await store.place()).toBe(false);
     expect(store.confirmed()).toBeNull();
     expect(store.slot()).toBeNull();
-    expect(store.step()).toBe(2);
+    expect(store.step()).toBe(CHECKOUT_STEP.slot);
     expect(store.attempt()).toBeNull();
   });
   it('blocks overlapping actions while a request is in flight', async () => {

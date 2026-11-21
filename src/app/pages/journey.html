@@ -319,7 +319,7 @@
             <div class="panel subtle">
               <h3>Booking for your family?</h3>
               <p>
-                Assign each test to the right person in the Patients step. Each patient receives
+                Assign each test to the right person in the Patients &amp; address step. Each patient receives
                 their own booking and report.
               </p>
             </div>
@@ -472,11 +472,11 @@
         } @else {
           <div class="checkout-layout">
             <section class="panel">
-              <p class="eyebrow">STEP {{ store.step() + 1 }} OF 6</p>
+              <p class="eyebrow">STEP {{ store.step() + 1 }} OF {{ steps.length }}</p>
               <h2 id="checkout-step-heading" tabindex="-1">{{ steps[store.step()] }}</h2>
               @switch (store.step()) {
-                @case (0) {
-                  <p class="lead small-lead">Who are these tests for?</p>
+                @case (STEP.people) {
+                  <h3 class="step-section first">Who are these tests for?</h3>
                   @for (line of store.lines(); track line.id) {
                     <div class="patient-line">
                       <h3>{{ line.item_name }}</h3>
@@ -502,9 +502,7 @@
                     </p>
                   }
                   <a class="text-link" routerLink="/account">Manage patient details & family →</a>
-                }
-                @case (1) {
-                  <p class="lead small-lead">Where should we collect?</p>
+                  <h3 class="step-section">Where should we collect?</h3>
                   <div class="address-list">
                     @for (address of store.addresses(); track address.id) {
                       <button
@@ -525,58 +523,72 @@
                   <p class="hint">Changing the address clears the previous collection slot.</p>
                   <a class="text-link" routerLink="/account">Manage saved addresses →</a>
                 }
-                @case (2) {
-                  <p class="lead small-lead">Choose a collection time.</p>
+                @case (STEP.slot) {
+                  <h3 class="step-section first">Choose a collection time</h3>
                   @if (store.preview()) {
                     <p class="notice-box">These are fixed example slots, not real availability.</p>
                   }
                   @if (!store.address()) {
                     <p>Choose a collection address in the previous step first.</p>
-                  }
-                  @for (day of store.days(); track day.day_key) {
-                    <h3 class="slot-day">{{ day.day_key }}</h3>
-                    <div class="slot-list">
-                      @for (slot of day.slots; track slot.id) {
-                        <button
-                          class="choice"
-                          [disabled]="!store.canEdit() || slot.capacity_left < 1"
-                          [class.chosen]="store.slot()?.id === slot.id"
-                          [attr.aria-pressed]="store.slot()?.id === slot.id"
-                          (click)="store.chooseSlot(slot)"
-                        >
-                          <strong>{{ instant(slot.starts_at) }}</strong
-                          ><span>Until {{ instant(slot.ends_at) }}</span
-                          ><span>{{
-                            slot.capacity_left < 1
-                              ? 'Full'
-                              : slot.capacity_left === 1
-                                ? '1 place left'
-                                : 'Available'
-                          }}</span>
-                          @if (slot.best_for_fasting) {
-                            <span>Best for fasting tests</span>
-                          }
-                        </button>
-                      }
-                    </div>
-                  } @empty {
+                  } @else if (!slotDays().length) {
                     <p>
                       No collection times are available for this address. Choose another address or
                       try again later.
                     </p>
+                  } @else {
+                    <div class="day-strip" role="tablist" aria-label="Collection day">
+                      @for (day of slotDays(); track day.key) {
+                        <button
+                          type="button"
+                          role="tab"
+                          class="day-tab"
+                          [class.active]="activeDay()?.key === day.key"
+                          [attr.aria-selected]="activeDay()?.key === day.key"
+                          [disabled]="!store.canEdit() || !day.open"
+                          (click)="chosenDay.set(day.key)"
+                        >
+                          <strong>{{ day.title }}</strong><span>{{ day.date }}</span
+                          ><small>{{ day.open ? day.open + (day.open === 1 ? ' time' : ' times') : 'Full' }}</small>
+                        </button>
+                      }
+                    </div>
+                    @if (activeDay(); as day) {
+                      @for (group of day.groups; track group.period) {
+                        <p class="slot-period">{{ group.period }}</p>
+                        <div class="slot-grid">
+                          @for (slot of group.slots; track slot.id) {
+                            <button
+                              type="button"
+                              class="slot-chip"
+                              [class.chosen]="store.slot()?.id === slot.id"
+                              [attr.aria-pressed]="store.slot()?.id === slot.id"
+                              [disabled]="!store.canEdit() || slot.capacity_left < 1"
+                              (click)="store.chooseSlot(slot)"
+                            >
+                              <strong>{{ slotTimeRange(slot) }}</strong>
+                              @if (slot.capacity_left < 1) {
+                                <small>Full</small>
+                              } @else if (slot.capacity_left === 1) {
+                                <small>1 place left</small>
+                              } @else if (slot.best_for_fasting) {
+                                <small>Best for fasting</small>
+                              }
+                            </button>
+                          }
+                        </div>
+                      }
+                    }
                   }
                   @if (store.slot()) {
                     <p class="hint">
                       {{
                         store.preview()
                           ? 'Sample slot selected.'
-                          : 'Your slot is temporarily held. If it expires, choose a slot again.'
+                          : 'Your slot is held for a short time. If it expires, choose a time again.'
                       }}
                     </p>
                   }
-                }
-                @case (3) {
-                  <p class="lead small-lead">A little preparation helps.</p>
+                  <h3 class="step-section">A little preparation helps</h3>
                   @if (store.preview()) {
                     <p>
                       Preparation in this preview is not confirmed medical advice. Live instructions
@@ -608,9 +620,8 @@
                     /><span>I have read the preparation information.</span></label
                   >
                 }
-                @case (4) {
-                  <p class="lead small-lead">Have a coupon?</p>
-                  <p>Apply a coupon or continue without one.</p>
+                @case (STEP.review) {
+                  <h3 class="step-section first">Have a coupon?</h3>
                   <form class="coupon-form" (ngSubmit)="store.coupon(couponCode)">
                     <label
                       >Coupon code<input
@@ -638,9 +649,7 @@
                     </div>
                   }
                   <p class="hint">Coupon conditions and discounts are checked by the server.</p>
-                }
-                @case (5) {
-                  <p class="lead small-lead">One last look.</p>
+                  <h3 class="step-section">One last look</h3>
                   <div class="review-block">
                     <h3>Patients & tests</h3>
                     @for (line of store.lines(); track line.id) {
@@ -756,12 +765,12 @@
               <div class="actions step-actions">
                 <button
                   class="button outline"
-                  [disabled]="!store.canEdit() || store.step() === 0"
+                  [disabled]="!store.canEdit() || store.step() === STEP.people"
                   (click)="back()"
                 >
                   ← Back
                 </button>
-                @if (store.step() < 5) {
+                @if (store.step() < STEP.review) {
                   <button class="button" [disabled]="!store.canEdit()" (click)="next()">
                     Continue →
                   </button>

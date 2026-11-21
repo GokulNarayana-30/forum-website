@@ -377,8 +377,7 @@ s {
 .patient-line label {
   min-width: 190px;
 }
-.address-list,
-.slot-list {
+.address-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 15px;
@@ -402,9 +401,6 @@ s {
   border: 2px solid var(--primary);
   background: var(--blush-light);
   padding: 19px;
-}
-.slot-day {
-  margin-top: 25px;
 }
 .step-actions {
   justify-content: space-between;
@@ -488,3 +484,4 @@ s {
   display: block;
   margin-block: 12px 4px;
 }
+

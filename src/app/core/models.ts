@@ -204,7 +204,9 @@ export function itemImage(item: Item): string {
   const cat = (item.category_ids?.[0] ?? '').replace(/^cat-/, 'cat_').replace(/-/g, '_');
   return KNOWN_IMAGES.has(cat) ? `assets/${cat}.webp` : 'assets/banner_home_collection.webp';
 }
-export const steps = ['Patients', 'Address', 'Slot', 'Preparation', 'Coupon', 'Review'];
+export const steps = ['Patients & address', 'Slot & preparation', 'Coupon & review'];
+/** The checkout steps by name, so no screen or rule depends on a bare index. */
+export const CHECKOUT_STEP = { people: 0, slot: 1, review: 2 } as const;
 
 /** A Home banner as the website shows it. The text comes from the API; the picture is the website one only. */
 export interface WebBanner {
@@ -362,4 +364,65 @@ export interface TicketMessagesPage {
 export interface SupportUnreadSummary {
   total_unread: number;
   chat_unread: number;
+}
+
+// Slot picker formatting. Every time is shown in IST, whatever the browser's time zone.
+const IST = 'Asia/Kolkata';
+
+/** The IST calendar day (YYYY-MM-DD) of an instant. */
+export function istDayKey(ms: number): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: IST, year: 'numeric', month: '2-digit', day: '2-digit' }).format(ms);
+}
+
+/** "Today" / "Tomorrow" / "Tue" with "24 Nov", for a server day key. */
+export function slotDayLabel(dayKey: string, todayKey: string): { title: string; date: string } {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dayKey)) return { title: dayKey, date: '' };
+  const noon = Date.parse(`${dayKey}T12:00:00+05:30`);
+  const tomorrowKey = istDayKey(Date.parse(`${todayKey}T12:00:00+05:30`) + 86_400_000);
+  const date = new Intl.DateTimeFormat('en-IN', { timeZone: IST, day: 'numeric', month: 'short' }).format(noon);
+  const title =
+    dayKey === todayKey
+      ? 'Today'
+      : dayKey === tomorrowKey
+        ? 'Tomorrow'
+        : new Intl.DateTimeFormat('en-IN', { timeZone: IST, weekday: 'short' }).format(noon);
+  return { title, date };
+}
+
+function istClock(iso: string): { text: string; period: 'am' | 'pm' } {
+  const parts = new Intl.DateTimeFormat('en-IN', {
+    timeZone: IST,
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).formatToParts(Date.parse(iso));
+  const hour = parts.find((p) => p.type === 'hour')?.value ?? '';
+  const minute = parts.find((p) => p.type === 'minute')?.value ?? '00';
+  const period = (parts.find((p) => p.type === 'dayPeriod')?.value ?? '').toLowerCase().startsWith('p') ? 'pm' : 'am';
+  return { text: `${hour}:${minute}`, period };
+}
+
+/** "7:00 – 8:00 am", or "11:30 am – 12:30 pm" when the range crosses noon. */
+export function slotTimeRange(slot: Slot): string {
+  const start = istClock(slot.starts_at);
+  const end = istClock(slot.ends_at);
+  return start.period === end.period
+    ? `${start.text} – ${end.text} ${end.period}`
+    : `${start.text} ${start.period} – ${end.text} ${end.period}`;
+}
+
+export type SlotPeriod = 'Morning' | 'Afternoon' | 'Evening';
+
+/** Morning before 12:00, afternoon before 16:00, evening after (IST start time). Empty periods are left out. */
+export function groupSlotsByPeriod(slots: Slot[]): { period: SlotPeriod; slots: Slot[] }[] {
+  const hourOf = (iso: string) =>
+    Number(new Intl.DateTimeFormat('en-GB', { timeZone: IST, hour: '2-digit', hour12: false }).format(Date.parse(iso)));
+  const groups: Record<SlotPeriod, Slot[]> = { Morning: [], Afternoon: [], Evening: [] };
+  for (const slot of slots) {
+    const hour = hourOf(slot.starts_at);
+    groups[hour < 12 ? 'Morning' : hour < 16 ? 'Afternoon' : 'Evening'].push(slot);
+  }
+  return (['Morning', 'Afternoon', 'Evening'] as const)
+    .filter((period) => groups[period].length)
+    .map((period) => ({ period, slots: groups[period] }));
 }
