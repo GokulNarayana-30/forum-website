@@ -24,6 +24,8 @@ import {
 import { WebsiteStore } from '../core/store';
 
 const MAX_CHECKS = 8;
+/** While the server confirms PayU's reply with its own check: up to two minutes. */
+const MAX_PROCESSING_CHECKS = 40;
 const POLL_MS = 3000;
 
 @Component({
@@ -40,7 +42,16 @@ const POLL_MS = 3000;
       } @else if (!activeId()) {
         <p>Open the booking from My bookings to check its payment.</p>
       } @else if (store.ready() && store.signedIn()) {
-        @if (status()?.expires_at && isWaiting()) {
+        @if (processing()) {
+          <div class="processing" role="status">
+            <span class="processing-spinner" aria-hidden="true"></span>
+            <p>
+              We’re confirming your payment with PayU. This usually takes a few seconds. Please don’t
+              pay again.
+            </p>
+          </div>
+        }
+        @if (status()?.expires_at && isWaiting() && !processing()) {
           <p>Pay by {{ instant(status()?.expires_at ?? undefined) }} to keep this slot.</p>
         }
         @if (message()) {
@@ -121,6 +132,30 @@ const POLL_MS = 3000;
     a {
       margin: 0.5rem 0.5rem 0.5rem 0;
     }
+    .processing {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .processing-spinner {
+      flex: 0 0 auto;
+      width: 1.5rem;
+      height: 1.5rem;
+      border: 3px solid var(--blush);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: payment-spin 0.9s linear infinite;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .processing-spinner {
+        animation-duration: 2.4s;
+      }
+    }
+    @keyframes payment-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
   `,
 })
 export class PaymentStatus {
@@ -140,8 +175,17 @@ export class PaymentStatus {
     const state = this.status()?.payment_state;
     return state === 'checking' || state === 'awaiting_payment' || state === 'retryable';
   });
+  /** Before the first answer, and while the server checks PayU's reply. */
+  protected readonly processing = computed(() => {
+    const state = this.status()?.payment_state;
+    return state === 'checking' || (!this.status() && !!this.activeId() && this.store.signedIn() && !this.store.preview());
+  });
   protected readonly heading = computed(() => {
     switch (this.status()?.payment_state) {
+      case 'awaiting_payment':
+        return 'Complete your payment';
+      case 'retryable':
+        return 'Payment not completed';
       case 'paid':
         return 'Payment confirmed';
       case 'pay_at_collection':
@@ -153,7 +197,7 @@ export class PaymentStatus {
       case 'refunded':
         return 'Refunded';
       default:
-        return 'Checking your payment…';
+        return 'Processing your payment…';
     }
   });
   private generation = 0;
@@ -226,7 +270,7 @@ export class PaymentStatus {
               .join(' '),
           );
         }
-      } else if (count < MAX_CHECKS) {
+      } else if (count < (status.payment_state === 'checking' ? MAX_PROCESSING_CHECKS : MAX_CHECKS)) {
         this.timer = setTimeout(() => void this.read(id, owner, generation, count + 1), POLL_MS);
       }
     } catch {

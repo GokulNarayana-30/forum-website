@@ -77,7 +77,7 @@ describe('Website payment return', () => {
       }),
     );
     const fixture = mount();
-    expect(fixture.nativeElement.textContent).toContain('Checking your payment');
+    expect(fixture.nativeElement.textContent).toContain('Processing your payment');
     expect(fixture.nativeElement.textContent).not.toContain('Payment confirmed');
     expect(read).toHaveBeenCalledExactlyOnceWith(orderId);
     answer(status);
@@ -109,8 +109,45 @@ describe('Website payment return', () => {
     fixture.detectChanges();
     expect(switchPayu).toHaveBeenCalledExactlyOnceWith(orderId);
     expect(read).toHaveBeenCalledTimes(2);
-    expect(fixture.nativeElement.textContent).toContain('Checking your payment');
+    expect(fixture.nativeElement.textContent).toContain('Processing your payment');
     expect(fixture.nativeElement.textContent).not.toContain('Payment confirmed');
+  });
+
+  // Owner, 2026-11-21: while our own Verify confirms PayU's reply, say so plainly and never invite a second payment.
+  it('shows processing with a calm note and no retry while the server checks the payment', async () => {
+    read.mockResolvedValue({ ...status, payment_state: 'checking', can_retry: false, can_switch: true });
+    const fixture = mount();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('Processing your payment');
+    expect(text).toContain('Please don’t pay again');
+    expect(fixture.nativeElement.querySelector('.processing-spinner')).not.toBeNull();
+    expect(text).not.toContain('Try payment again');
+  });
+
+  it('names an unfinished payment plainly and offers the retry', async () => {
+    read.mockResolvedValue({ ...status, payment_state: 'retryable', can_retry: true, can_switch: true });
+    const fixture = mount();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('Payment not completed');
+    expect(text).toContain('Try payment again');
+    expect(fixture.nativeElement.querySelector('.processing-spinner')).toBeNull();
+  });
+
+  it('keeps checking for up to two minutes while processing, then stops', async () => {
+    vi.useFakeTimers();
+    try {
+      read.mockResolvedValue({ ...status, payment_state: 'checking', can_retry: false });
+      const fixture = mount();
+      await vi.advanceTimersByTimeAsync(300_000);
+      expect(read).toHaveBeenCalledTimes(40);
+      fixture.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('bounds polling and removes the timer on teardown', async () => {
