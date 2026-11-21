@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { WebsiteStore } from '../core/store';
 import { instant, money } from '../core/models';
@@ -22,7 +22,7 @@ import { instant, money } from '../core/models';
           store.preview()
             ? 'Sample subtotal'
             : store.quote()
-              ? 'Pay at collection'
+              ? payLabel()
               : 'Estimated subtotal'
         }}</small></span
       ><strong>{{ money(store.total()) }}</strong
@@ -51,7 +51,7 @@ import { instant, money } from '../core/models';
           <span>Taxes</span><span>{{ money(quote.taxes_paise) }}</span>
         </p>
         <div class="summary-total">
-          <span>Pay at collection</span><strong>{{ money(quote.to_pay_paise) }}</strong>
+          <span>{{ payLabel() }}</span><strong>{{ money(quote.to_pay_paise) }}</strong>
         </div>
       } @else {
         <div class="summary-total">
@@ -78,10 +78,17 @@ import { instant, money } from '../core/models';
           <p>{{ instant(slot.starts_at) }}</p>
         </div>
       }
-      <div class="summary-note">
-        <strong>Cash or UPI at collection</strong>
-        <p>No online payment is needed.</p>
-      </div>
+      @if (store.paymentChoice() === 'payu') {
+        <div class="summary-note">
+          <strong>Pay online with PayU</strong>
+          <p>UPI, card or netbanking on PayU's secure page, right after you book.</p>
+        </div>
+      } @else {
+        <div class="summary-note">
+          <strong>Cash or UPI at collection</strong>
+          <p>No online payment is needed.</p>
+        </div>
+      }
       <a class="text-link" routerLink="/tests">Continue browsing →</a>
     </div>
   </aside>`,
@@ -89,6 +96,9 @@ import { instant, money } from '../core/models';
 export class Summary {
   protected readonly expanded = signal(false);
   protected readonly store = inject(WebsiteStore);
+  protected readonly payLabel = computed(() =>
+    this.store.paymentChoice() === 'payu' ? 'Pay online' : 'Pay at collection',
+  );
   protected readonly money = money;
   protected readonly instant = instant;
 }

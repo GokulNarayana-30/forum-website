@@ -716,7 +716,9 @@
                       {{
                         store.preview()
                           ? 'Cancellation and rescheduling rules are confirmed by Forum for live bookings.'
-                          : store.policy()
+                          : store.paymentChoice() === 'payu'
+                            ? 'You can cancel or reschedule free of charge before the cut-off. If you cancel in time, your online payment is refunded in full to the same payment method.'
+                            : store.policy()
                       }}
                     </p>
                   </div>
@@ -807,7 +809,8 @@
           <p class="booking-ref">{{ order.booking_ref }}</p>
           <p>{{ instant(order.slot_starts_at) }}</p>
           <p>
-            Pay at collection: <strong>{{ money(order.total_paise) }}</strong>
+            {{ order.payment_status === 'paid' ? 'Paid online' : 'Pay at collection' }}:
+            <strong>{{ money(order.total_paise) }}</strong>
           </p>
           <p>
             Keep your preparation instructions handy. Each patient’s booking and report are managed

@@ -211,7 +211,7 @@ label {
   color: var(--body);
   margin-bottom: 18px;
 }
-input:not([type='checkbox']),
+input:not([type='checkbox']):not([type='radio']),
 select,
 textarea {
   display: block;
@@ -536,7 +536,7 @@ forum-summary {
   font: inherit;
 }
 @media (max-width: 760px) {
-  input:not([type='checkbox']),
+  input:not([type='checkbox']):not([type='radio']),
   select,
   textarea {
     font-size: 16px;
