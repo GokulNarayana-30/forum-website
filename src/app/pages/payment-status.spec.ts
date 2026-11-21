@@ -137,6 +137,17 @@ describe('Website payment return', () => {
     expect(text).not.toContain('Try payment again');
   });
 
+  // Owner, 2026-11-21: the server sends a fallback email, so no state asks for one unless the server requires it.
+  it.each(['paid', 'checking', 'retryable', 'awaiting_payment', 'expired'])('shows no email box when %s', async (state) => {
+    read.mockResolvedValue({ ...status, payment_state: state, can_retry: state === 'retryable' || state === 'awaiting_payment',
+      can_switch: false });
+    const fixture = mount();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('input[type=email]')).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('Skip email');
+  });
+
   it('names an unfinished payment plainly and offers the retry', async () => {
     read.mockResolvedValue({ ...status, payment_state: 'retryable', can_retry: true, can_switch: true });
     const fixture = mount();

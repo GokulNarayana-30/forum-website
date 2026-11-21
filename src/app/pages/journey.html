@@ -699,25 +699,6 @@
                         />
                         <span>Pay at collection (cash or UPI)</span>
                       </label>
-                      @if (store.paymentChoice() === 'payu' && !store.profile()?.email) {
-                        <label class="payment-email"
-                          >Email (optional)
-                          <input
-                            type="email"
-                            autocomplete="email"
-                            [(ngModel)]="paymentEmail"
-                            [disabled]="!store.canEdit()"
-                          />
-                        </label>
-                        <button
-                          class="text-link"
-                          type="button"
-                          (click)="paymentEmail = ''"
-                          [disabled]="!store.canEdit()"
-                        >
-                          Skip
-                        </button>
-                      }
                     } @else {
                       <p>Pay at collection (cash or UPI)</p>
                     }

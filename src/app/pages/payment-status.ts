@@ -111,10 +111,10 @@ const POLL_MS = 3000;
             }
           </dl>
         }
-        @if (status()?.can_retry || feedback() === 'email_required') {
-          @if (!store.profile()?.email || feedback() === 'email_required') {
-            <label class="pay-email" for="payu-email-{{ activeId() }}"
-              >{{ feedback() === 'email_required' ? 'Email' : 'Email (optional)' }}
+        <!-- Only when the server has no fallback email and asks for one (it sends a Forum address otherwise). -->
+        @if (feedback() === 'email_required') {
+          <label class="pay-email" for="payu-email-{{ activeId() }}"
+              >Email
               <input
                 id="payu-email-{{ activeId() }}"
                 type="email"
@@ -124,7 +124,6 @@ const POLL_MS = 3000;
                 [required]="feedback() === 'email_required'"
                 [disabled]="acting()"
             /></label>
-          }
         }
         <div class="pay-actions">
           @if (status()?.can_retry || feedback() === 'email_required') {
@@ -138,16 +137,6 @@ const POLL_MS = 3000;
                 status()?.payment_state === 'awaiting_payment' ? 'Pay online' : 'Try payment again'
               }}
             </button>
-            @if (!store.profile()?.email && feedback() !== 'email_required') {
-              <button
-                class="button outline"
-                type="button"
-                [disabled]="acting()"
-                (click)="retry(true)"
-              >
-                Skip email
-              </button>
-            }
           }
           @if (status()?.can_switch && !processing()) {
             <button
