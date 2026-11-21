@@ -42,7 +42,7 @@ const SESSION_KEY = 'forum-web-session';
 // A token this close to its end is renewed first, so a request never leaves with one that expires mid-flight.
 const RENEW_MARGIN_MS = 30000;
 
-export const ALLOWED_SIGN_IN_RETURNS = ['/chat', '/cart', '/checkout'] as const;
+export const ALLOWED_SIGN_IN_RETURNS = ['/chat', '/cart', '/checkout', '/bookings'] as const;
 export type SafeSignInReturn = (typeof ALLOWED_SIGN_IN_RETURNS)[number];
 
 export function safeSignInReturn(next: string | null | undefined): SafeSignInReturn | null {
@@ -123,6 +123,30 @@ export class WebsiteApi {
     if (r.status === 401) {
       this.clearSession();
       throw new WebsiteError('sign_in', 'Please sign in again to continue.');
+    }
+    if (
+      r.status === 422 &&
+      method === 'POST' &&
+      (path === '/orders' || /^\/orders\/[0-9a-f-]+\/payu\/attempts$/i.test(path))
+    ) {
+      const error = (await r.json().catch(() => null)) as {
+        details?: { fields?: { path?: unknown }[] };
+      } | null;
+      const fields = error?.details?.fields;
+      if (Array.isArray(fields)) {
+        if (path !== '/orders' && fields.some((field) => field?.path === 'email')) {
+          throw new WebsiteError(
+            'payu_email_required',
+            'Enter an email address to continue online payment.',
+          );
+        }
+        if (path === '/orders' && fields.some((field) => field?.path === 'payment_choice')) {
+          throw new WebsiteError(
+            'payment_choice_unavailable',
+            'Online payment is unavailable. Review payment at collection.',
+          );
+        }
+      }
     }
     if (!r.ok)
       throw new WebsiteError(
@@ -245,7 +269,12 @@ export class WebsiteApi {
   }
   /** A right code confirms [phone] on the signed-in account. */
   async verifyPhoneChange(phone: string, code: string): Promise<void> {
-    const data = await this.auth('/verify', 'POST', { type: 'phone_change', phone, token: code }, true);
+    const data = await this.auth(
+      '/verify',
+      'POST',
+      { type: 'phone_change', phone, token: code },
+      true,
+    );
     if (typeof data['access_token'] === 'string') this.adoptSession(data);
   }
   private adoptSession(data: Record<string, unknown>): void {
@@ -304,11 +333,7 @@ export class WebsiteApi {
   /** Returns an active access token in live mode, renewing through the stored refresh token when needed. */
   async accessToken(options?: { forceRefresh?: boolean }): Promise<string | null> {
     if (this.config().mode !== 'live') return null;
-    if (
-      options?.forceRefresh ||
-      !this.token ||
-      Date.now() >= this.expiresAt - RENEW_MARGIN_MS
-    ) {
+    if (options?.forceRefresh || !this.token || Date.now() >= this.expiresAt - RENEW_MARGIN_MS) {
       await this.renewFromStore();
     }
     if (!this.token || Date.now() >= this.expiresAt) {

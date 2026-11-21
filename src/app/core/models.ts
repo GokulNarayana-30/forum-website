@@ -93,6 +93,34 @@ export interface SlotDay {
   day_key: string;
   slots: Slot[];
 }
+export type PaymentChoice = 'payu' | 'pay_at_collection';
+export const paymentStates = [
+  'awaiting_payment',
+  'checking',
+  'retryable',
+  'paid',
+  'pay_at_collection',
+  'expired',
+  'refund_in_progress',
+  'refunded',
+] as const;
+export interface PaymentStatusView {
+  order_id: string;
+  payment_state: (typeof paymentStates)[number];
+  expires_at: string | null;
+  can_retry: boolean;
+  can_switch: boolean;
+}
+export type PayuLaunch =
+  'redirected' | 'checking' | 'failed' | 'unavailable' | 'not_due' | 'email_required';
+
+export function paymentOrderId(value: string | null): string | null {
+  return value &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+    ? value.toLowerCase()
+    : null;
+}
+
 export interface Order {
   id: string;
   booking_ref: string;
@@ -103,7 +131,17 @@ export interface Order {
   patients: { id: string; first_name: string; relation: string }[];
   lines?: { test_name: string; amount_paise: number }[];
   payment_status?: string;
+  payment_method_label?: string | null;
+  payu_hold_expires_at?: string;
+  refund?: { amount_paise: number; state: 'pending' | 'done' } | null;
 }
+export function refundProgressText(refund: Order['refund']): string {
+  if (!refund || !Number.isSafeInteger(refund.amount_paise) || refund.amount_paise <= 0) return '';
+  if (refund.state === 'done') return 'Refunded';
+  if (refund.state !== 'pending') return '';
+  return `Refund of ${money(refund.amount_paise)} started. It usually reaches your account in 5–7 working days.`;
+}
+
 export interface Report {
   id: string;
   patient_first_name: string;
@@ -160,7 +198,8 @@ const KNOWN_IMAGES = new Set([
 export function itemImage(item: Item): string {
   if (item.image_url) return item.image_url;
   const own = `assets/${item.id}.webp`;
-  if (item.id.startsWith('t-') && TEST_ICONS.has(item.id.slice(2))) return `assets/tests/${item.id.slice(2)}.webp`;
+  if (item.id.startsWith('t-') && TEST_ICONS.has(item.id.slice(2)))
+    return `assets/tests/${item.id.slice(2)}.webp`;
   if (!item.id.startsWith('p-') && !item.id.startsWith('t-')) return own;
   const cat = (item.category_ids?.[0] ?? '').replace(/^cat-/, 'cat_').replace(/-/g, '_');
   return KNOWN_IMAGES.has(cat) ? `assets/${cat}.webp` : 'assets/banner_home_collection.webp';
@@ -242,10 +281,7 @@ export function bannerLink(
 }
 
 export type SupportAvailabilityReason =
-  | 'online'
-  | 'outside_hours'
-  | 'holiday'
-  | 'no_agent_available';
+  'online' | 'outside_hours' | 'holiday' | 'no_agent_available';
 
 export interface SupportAvailability {
   online: boolean;

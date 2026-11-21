@@ -56,6 +56,11 @@ export const routes: Routes = [
     title: 'Book home collection | Forum Labs',
   },
   {
+    path: 'payment-status',
+    loadComponent: () => import('./pages/payment-status').then((m) => m.PaymentStatus),
+    title: 'Payment status | Forum Labs',
+  },
+  {
     path: 'confirmation',
     loadComponent: journey,
     data: { view: 'confirmation' },

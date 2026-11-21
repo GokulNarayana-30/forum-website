@@ -667,7 +667,51 @@
                   </div>
                   <div class="review-block">
                     <h3>Payment & cancellation</h3>
-                    <p>Pay by cash or UPI to the phlebotomist at collection.</p>
+                    @if (store.canPayOnline()) {
+                      <label class="check payment-choice">
+                        <input
+                          name="paymentChoice"
+                          type="radio"
+                          value="payu"
+                          [ngModel]="store.paymentChoice()"
+                          (ngModelChange)="store.preferredPayment.set($event)"
+                          [disabled]="!store.canEdit()"
+                        />
+                        <span>Pay online (UPI, card, netbanking)</span>
+                      </label>
+                      <label class="check payment-choice">
+                        <input
+                          name="paymentChoice"
+                          type="radio"
+                          value="pay_at_collection"
+                          [ngModel]="store.paymentChoice()"
+                          (ngModelChange)="store.preferredPayment.set($event)"
+                          [disabled]="!store.canEdit()"
+                        />
+                        <span>Pay at collection (cash or UPI)</span>
+                      </label>
+                      @if (store.paymentChoice() === 'payu' && !store.profile()?.email) {
+                        <label class="payment-email"
+                          >Email (optional)
+                          <input
+                            type="email"
+                            autocomplete="email"
+                            [(ngModel)]="paymentEmail"
+                            [disabled]="!store.canEdit()"
+                          />
+                        </label>
+                        <button
+                          class="text-link"
+                          type="button"
+                          (click)="paymentEmail = ''"
+                          [disabled]="!store.canEdit()"
+                        >
+                          Skip
+                        </button>
+                      }
+                    } @else {
+                      <p>Pay at collection (cash or UPI)</p>
+                    }
                     <p>
                       {{
                         store.preview()
@@ -727,7 +771,13 @@
                     "
                     (click)="place()"
                   >
-                    {{ store.preview() ? 'Finish preview' : 'Confirm booking · Pay at collection' }}
+                    {{
+                      store.preview()
+                        ? 'Finish preview'
+                        : store.paymentChoice() === 'payu'
+                          ? 'Book and pay online'
+                          : 'Confirm booking · Pay at collection'
+                    }}
                   </button>
                 }
               </div>

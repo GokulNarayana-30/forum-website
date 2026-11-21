@@ -67,6 +67,7 @@ export class Journey {
   protected readonly itemPrice = itemPrice;
   protected readonly steps = steps;
   protected couponCode = '';
+  protected paymentEmail = '';
   protected readonly selectedOrder = signal<Order | null>(null);
   protected readonly filtered = computed(() => {
     const search = this.query().trim().toLowerCase();
@@ -129,7 +130,10 @@ export class Journey {
       });
     });
     effect(() => {
-      if (!this.store.signedIn() || this.view() !== 'bookings') this.selectedOrder.set(null);
+      const signedIn = this.store.signedIn();
+      const view = this.view();
+      if (!signedIn || view !== 'bookings') this.selectedOrder.set(null);
+      if (!signedIn || view !== 'checkout') this.paymentEmail = '';
     });
   }
   protected contains(item: Item): boolean {
@@ -176,8 +180,17 @@ export class Journey {
     await this.router.navigateByUrl(this.nextReturn() ?? '/checkout');
   }
   protected async place(): Promise<void> {
-    const ok = await this.store.place();
-    if (ok && (this.store.previewComplete() || this.store.confirmed()))
+    const ok = await this.store.place(this.paymentEmail);
+    if (!ok) return;
+    this.paymentEmail = '';
+    const payment = this.store.paymentOrder();
+    if (payment) {
+      if (this.store.initialPayuFeedback()?.kind !== 'redirected') {
+        await this.router.navigate(['/payment-status'], { queryParams: { order: payment.id } });
+      }
+      return;
+    }
+    if (this.store.previewComplete() || this.store.confirmed())
       await this.router.navigateByUrl('/confirmation');
   }
   private focusStep(): void {

@@ -32,14 +32,29 @@ describe('Booking status feedback', () => {
   });
   afterEach(() => TestBed.resetTestingModule());
 
-  async function render() {
+  async function render(selectedOrder = order) {
     const fixture = TestBed.createComponent(BookingStatus);
-    fixture.componentRef.setInput('order', order);
+    fixture.componentRef.setInput('order', selectedOrder);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
     return fixture;
   }
+
+  it('renders an exact pending refund and the committed terminal state', async () => {
+    request.mockResolvedValue(history());
+    const fixture = await render({ ...order, refund: { state: 'pending', amount_paise: 123456 } });
+    expect(fixture.nativeElement.textContent).toContain('Refund of ₹1,234.56 started');
+    expect(fixture.nativeElement.textContent).not.toContain('Refunded');
+    fixture.componentRef.setInput('order', {
+      ...order,
+      refund: { state: 'done', amount_paise: 123456 },
+    });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Refunded');
+  });
 
   it('opens immediately with the booking summary and loading feedback', async () => {
     request.mockReturnValue(new Promise(() => {}));

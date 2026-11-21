@@ -3,6 +3,7 @@ import {
   DestroyRef,
   ElementRef,
   afterNextRender,
+  computed,
   effect,
   inject,
   input,
@@ -12,21 +13,34 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { WebsiteApi, WebsiteError } from '../core/api';
-import { Order, instant } from '../core/models';
+import { PaymentStatus } from './payment-status';
+import { Order, instant, refundProgressText } from '../core/models';
 
 interface Tracking {
   order_id: string;
   events: { kind: string; at: string }[];
+  refund?: Order['refund'];
+  refund_timeline?: string | null;
 }
 
 @Component({
   selector: 'forum-booking-status',
-  imports: [RouterLink],
+  imports: [RouterLink, PaymentStatus],
   template: `<section class="panel" aria-label="Booking status" [attr.aria-busy]="loading()">
     <h2 #heading tabindex="-1">{{ order().booking_ref }} · Status</h2>
-    <p>
-      <strong>{{ label(order().status) }}</strong>
-    </p>
+    @if (onlinePending()) {
+      <forum-payment-status [orderId]="order().id" />
+    } @else {
+      <p>
+        <strong>{{ label(order().status) }}</strong>
+      </p>
+      @if (order().payment_method_label) {
+        <p>{{ order().payment_method_label }}</p>
+      }
+      @if (refundMessage(); as refund) {
+        <p>{{ refund }}</p>
+      }
+    }
     <p>Collection: {{ instant(order().slot_starts_at) }}</p>
     @if (loading()) {
       <p role="status">Loading booking updates…</p>
@@ -90,6 +104,14 @@ export class BookingStatus {
   protected readonly loading = signal(true);
   protected readonly error = signal('');
   protected readonly instant = instant;
+  protected readonly onlinePending = computed(
+    () => this.order().payment_status === 'payment_pending',
+  );
+  protected readonly refundMessage = computed(
+    () =>
+      this.tracking()?.refund_timeline ||
+      refundProgressText(this.tracking()?.refund ?? this.order().refund),
+  );
   private sequence = 0;
 
   constructor() {

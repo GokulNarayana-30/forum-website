@@ -155,6 +155,108 @@ describe('Customer website booking boundaries', () => {
     expect(store.confirmed()).toEqual(order);
     expect(store.lines()).toHaveLength(0);
   });
+  const pendingOrder: Order = {
+    ...order,
+    id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+    status: 'payment_pending',
+    payment_status: 'payment_pending',
+  };
+
+  it('preselects PayU when policy enables it, and Skip launches without saving an email', async () => {
+    liveCheckout();
+    store.onlinePaymentEnabled.set(true);
+    expect(store.paymentChoice()).toBe('payu');
+    api.request
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ kind: 'order_placed', order: pendingOrder })
+      .mockResolvedValueOnce({ kind: 'payu_checkout_pending' });
+    expect(await store.place()).toBe(true);
+    expect(api.request.mock.calls[1][2]).toHaveProperty('payment_choice', 'payu');
+    expect(api.request.mock.calls[2]).toEqual([
+      `/orders/${pendingOrder.id}/payu/attempts`,
+      'POST',
+      undefined,
+      expect.any(String),
+    ]);
+    expect(
+      api.request.mock.calls.some(([path, method]) => path === '/me' && method === 'PATCH'),
+    ).toBe(false);
+    expect(store.confirmed()).toBeNull();
+    expect(store.paymentOrder()?.id).toBe(pendingOrder.id);
+  });
+
+  it('saves an optional email with the full profile and prompts only for the email refusal', async () => {
+    liveCheckout();
+    store.onlinePaymentEnabled.set(true);
+    store.profile.set({
+      id: 'owner-a',
+      name: 'Account name',
+      relation: 'self',
+      date_of_birth: '1999-01-01',
+      gender: 'female',
+    });
+    api.request.mockRejectedValueOnce(new WebsiteError('payu_email_required'));
+    expect(await store.startPayu(pendingOrder.id)).toBe('email_required');
+    expect(api.request).toHaveBeenCalledTimes(1);
+    api.request
+      .mockResolvedValueOnce({ ...store.profile(), email: 'payer@example.test' })
+      .mockResolvedValueOnce({ kind: 'payu_checkout_pending' });
+    expect(await store.startPayu(pendingOrder.id, ' payer@example.test ')).toBe('checking');
+    expect(api.request.mock.calls[1]).toEqual([
+      '/me',
+      'PATCH',
+      {
+        name: 'Account name',
+        email: 'payer@example.test',
+        date_of_birth: '1999-01-01',
+        gender: 'female',
+      },
+    ]);
+  });
+
+  it('offers only collection payment for an unknown or zero total and recovers from a disabled PayU choice', async () => {
+    liveCheckout();
+    expect(store.paymentChoice()).toBe('pay_at_collection');
+    store.onlinePaymentEnabled.set(true);
+    const quote = store.quote()!;
+    store.quote.set({ ...quote, to_pay_paise: 0 });
+    expect(store.paymentChoice()).toBe('pay_at_collection');
+    store.quote.set(quote);
+    api.request
+      .mockResolvedValueOnce(null)
+      .mockRejectedValueOnce(new WebsiteError('payment_choice_unavailable'));
+    expect(await store.place()).toBe(false);
+    expect(store.paymentChoice()).toBe('pay_at_collection');
+    expect(store.attempt()).toBeNull();
+  });
+
+  it('switches the same order through the keyed API without posting another booking', async () => {
+    liveCheckout();
+    api.request.mockResolvedValueOnce({ kind: 'payu_checkout_pending' });
+    expect(await store.switchPayu(pendingOrder.id)).toBe('payu_checkout_pending');
+    expect(api.request).toHaveBeenCalledExactlyOnceWith(
+      `/orders/${pendingOrder.id}/payu/switch`,
+      'POST',
+      undefined,
+      expect.any(String),
+    );
+  });
+
+  it('recovers an existing pending booking without starting another session', async () => {
+    liveCheckout();
+    store.onlinePaymentEnabled.set(true);
+    api.request
+      .mockResolvedValueOnce(null)
+      .mockRejectedValueOnce(new WebsiteError('network'))
+      .mockResolvedValueOnce(pendingOrder);
+    expect(await store.place()).toBe(false);
+    store.onlinePaymentEnabled.set(false);
+    expect(await store.place()).toBe(true);
+    expect(store.paymentOrder()?.id).toBe(pendingOrder.id);
+    expect(api.request.mock.calls.filter((call) => call[1] === 'POST')).toHaveLength(1);
+    expect(api.request.mock.calls[1][2]).toHaveProperty('payment_choice', 'payu');
+  });
+
   it('freezes the exact payload and key when an order response is lost', async () => {
     liveCheckout();
     api.request

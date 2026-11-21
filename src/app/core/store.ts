@@ -1,4 +1,14 @@
-import { Injectable, computed, inject, signal, effect, untracked } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import {
+  DOCUMENT,
+  Injectable,
+  PLATFORM_ID,
+  computed,
+  inject,
+  signal,
+  effect,
+  untracked,
+} from '@angular/core';
 import { SafeSignInReturn, WebsiteApi, WebsiteError } from './api';
 import {
   Address,
@@ -7,6 +17,11 @@ import {
   Item,
   Line,
   Order,
+  PaymentChoice,
+  PaymentStatusView,
+  PayuLaunch,
+  paymentOrderId,
+  paymentStates,
   Person,
   Quote,
   Report,
@@ -40,10 +55,33 @@ interface Attempt {
   owner: string;
   body: Record<string, unknown> | null;
 }
+export function checkedPayuCheckoutUrl(value: unknown): string | null {
+  if (typeof value !== 'string' || value.length > 1024) return null;
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return null;
+  }
+  if (
+    url.href !== value ||
+    !['https://api.payu.in', 'https://apitest.payu.in'].includes(url.origin) ||
+    url.pathname !== '/public/' ||
+    url.username ||
+    url.password ||
+    url.search ||
+    !/^#[A-Za-z0-9/_.~=&?%-]{1,1000}$/.test(url.hash)
+  )
+    return null;
+  return url.href;
+}
+
 @Injectable({ providedIn: 'root' })
 export class WebsiteStore {
   readonly api = inject(WebsiteApi);
   private readonly clock = inject(WebsiteClock);
+  private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
+  private readonly document = inject(DOCUMENT);
   readonly ready = signal(false);
   readonly busy = signal(false);
   readonly error = signal('');
@@ -75,6 +113,17 @@ export class WebsiteStore {
   readonly demoSignedIn = signal(false);
   readonly terms = signal(false);
   readonly policy = signal('');
+  readonly onlinePaymentEnabled = signal(false);
+  readonly canPayOnline = computed(
+    () => !this.preview() && this.onlinePaymentEnabled() && (this.quote()?.to_pay_paise ?? 0) > 0,
+  );
+  readonly preferredPayment = signal<PaymentChoice>('payu');
+  readonly paymentChoice = computed<PaymentChoice>(() =>
+    this.canPayOnline() ? this.preferredPayment() : 'pay_at_collection',
+  );
+  readonly paymentOrder = signal<Order | null>(null);
+  readonly initialPayuFeedback = signal<{ orderId: string; kind: PayuLaunch } | null>(null);
+  private readonly launchingOrders = new Set<string>();
   readonly attempt = signal<Attempt | null>(null);
   readonly holdExpires = signal(0);
   readonly signedIn = computed(() => (this.preview() ? this.demoSignedIn() : this.api.signedIn()));
@@ -109,6 +158,10 @@ export class WebsiteStore {
     this.reports.set([]);
     this.documentLink.set(null);
     this.confirmed.set(null);
+    this.paymentOrder.set(null);
+    this.initialPayuFeedback.set(null);
+    this.onlinePaymentEnabled.set(false);
+    this.preferredPayment.set('payu');
     this.attempt.set(null);
     this.step.set(0);
     this.consent.set(false);
@@ -443,16 +496,16 @@ export class WebsiteStore {
     });
   }
   private async loadAccount(): Promise<void> {
+    this.onlinePaymentEnabled.set(false);
     const p = await this.api.request<Profile>('/me');
     this.profile.set(p);
-    const [family, addresses, policy] = await Promise.all([
+    const [family, addresses] = await Promise.all([
       this.api.request<Person[]>('/me/family'),
       this.api.request<Address[]>('/me/addresses'),
-      this.api.request<{ cancellation_policy: string }>('/checkout/policy'),
+      this.refreshPaymentPolicy(),
     ]);
     this.people.set([{ ...p, id: 'me', relation: 'self' }, ...family]);
     this.addresses.set(addresses);
-    this.policy.set(policy.cancellation_policy);
     // Guest selections are removed one at a time only after a confirmed server outcome.
     for (const id of [...this.guestIds]) {
       const r = await this.api.request<Outcome>('/cart/lines', 'POST', {
@@ -475,6 +528,19 @@ export class WebsiteStore {
         'Some guest selections need your profile details before they can be added. Complete your Account details, then add them again.',
       );
   }
+  private async refreshPaymentPolicy(): Promise<void> {
+    this.onlinePaymentEnabled.set(false);
+    try {
+      const policy = await this.api.request<{
+        cancellation_policy: string;
+        online_payment_enabled?: boolean;
+      }>('/checkout/policy');
+      this.policy.set(policy.cancellation_policy);
+      this.onlinePaymentEnabled.set(policy.online_payment_enabled === true);
+    } catch {
+      // Without an affirmative policy, checkout only offers payment at collection.
+    }
+  }
   signOut(): void {
     if (this.busy()) return;
     this.api.clearSession();
@@ -491,6 +557,10 @@ export class WebsiteStore {
     this.reports.set([]);
     this.documentLink.set(null);
     this.confirmed.set(null);
+    this.paymentOrder.set(null);
+    this.initialPayuFeedback.set(null);
+    this.onlinePaymentEnabled.set(false);
+    this.preferredPayment.set('payu');
     this.attempt.set(null);
     this.step.set(0);
     this.consent.set(false);
@@ -610,7 +680,10 @@ export class WebsiteStore {
       return false;
     }
     if (index === 4 && !this.preview()) {
-      const ok = await this.run(() => this.refreshCart());
+      const ok = await this.run(async () => {
+        await this.refreshCart();
+        await this.refreshPaymentPolicy();
+      });
       if (!ok) return false;
     }
     this.error.set('');
@@ -666,7 +739,7 @@ export class WebsiteStore {
       this.consentAt = value ? this.clock.iso() : '';
     }
   }
-  async place(): Promise<boolean> {
+  async place(email = ''): Promise<boolean> {
     return this.run(async () => {
       if (this.preview()) {
         if (
@@ -683,6 +756,7 @@ export class WebsiteStore {
         this.previewComplete.set(true);
         return;
       }
+      if (!this.browser) return;
       let a = this.attempt();
       if (!a) {
         const q = this.quote(),
@@ -731,6 +805,7 @@ export class WebsiteStore {
             address_pincode: address.pincode,
             slot_id: slot.id,
             coupon_code: q.applied_coupon?.code ?? null,
+            payment_choice: this.paymentChoice(),
             consent: {
               diagnostic_accepted: true,
               marketing_accepted: false,
@@ -742,10 +817,12 @@ export class WebsiteStore {
         sessionStorage.setItem('forum-web-attempt', JSON.stringify({ key: a.key, owner: a.owner }));
         this.attempt.set(a);
       }
+      if (!this.isPaymentOwner(a.owner)) throw new WebsiteError('sign_in');
       // Freeze both payload and key after an uncertain response. Edits remain blocked until resolved.
       const found = await this.api.request<Order | null>(
         '/checkout/attempts/' + encodeURIComponent(a.key) + '/order',
       );
+      if (!this.isPaymentOwner(a.owner)) return;
       if (found) {
         this.finishOrder(found);
         return;
@@ -755,9 +832,38 @@ export class WebsiteStore {
           'pending',
           'We have not found a confirmed booking for this earlier attempt. Check My bookings or contact Forum before starting another booking.',
         );
-      const result = await this.api.request<Outcome>('/orders', 'POST', a.body, a.key);
+      let result: Outcome;
+      try {
+        result = await this.api.request<Outcome>('/orders', 'POST', a.body, a.key);
+      } catch (error) {
+        if (
+          this.isPaymentOwner(a.owner) &&
+          error instanceof WebsiteError &&
+          error.code === 'payment_choice_unavailable'
+        ) {
+          this.onlinePaymentEnabled.set(false);
+          this.clearAttempt();
+          this.setConsent(false);
+        }
+        throw error;
+      }
+      if (!this.isPaymentOwner(a.owner)) return;
       if (result.kind === 'order_placed' && result.order) {
         this.finishOrder(result.order);
+        if (
+          this.paymentOrder()?.id === result.order.id &&
+          result.order.payment_status === 'payment_pending' &&
+          result.order.status === 'payment_pending'
+        ) {
+          let kind: PayuLaunch = 'failed';
+          try {
+            kind = await this.startPayu(result.order.id, email);
+          } catch (error) {
+            if (error instanceof WebsiteError && error.code === 'network') kind = 'checking';
+          }
+          if (this.isPaymentOwner(a.owner))
+            this.initialPayuFeedback.set({ orderId: result.order.id, kind });
+        }
         return;
       }
       this.clearAttempt();
@@ -801,7 +907,14 @@ export class WebsiteStore {
       !Number.isSafeInteger(o.total_paise)
     )
       throw new WebsiteError('response');
-    this.confirmed.set(o);
+    const online =
+      o.payment_status === 'payment_pending' ||
+      o.status === 'payment_pending' ||
+      !!o.payu_hold_expires_at;
+    if (online && !paymentOrderId(o.id)) throw new WebsiteError('response');
+    this.confirmed.set(online ? null : o);
+    this.paymentOrder.set(online ? o : null);
+    this.initialPayuFeedback.set(null);
     this.lines.set([]);
     this.quote.set(null);
     this.snapshot.set(null);
@@ -813,6 +926,118 @@ export class WebsiteStore {
     this.consent.set(false);
     this.preparationRead.set(false);
   }
+  private isPaymentOwner(owner: string): boolean {
+    return this.browser && !this.preview() && this.signedIn() && this.profile()?.id === owner;
+  }
+
+  private payuPath(id: string): string {
+    const orderId = paymentOrderId(id);
+    if (!orderId || !this.isPaymentOwner(this.profile()?.id ?? ''))
+      throw new WebsiteError('payment_unavailable');
+    return `/orders/${orderId}/payu`;
+  }
+
+  async paymentStatus(orderId: string): Promise<PaymentStatusView> {
+    const owner = this.profile()?.id ?? '';
+    const result = await this.api.request<PaymentStatusView>(this.payuPath(orderId) + '/status');
+    if (
+      !this.isPaymentOwner(owner) ||
+      result?.order_id !== paymentOrderId(orderId) ||
+      !paymentStates.includes(result.payment_state) ||
+      typeof result.can_retry !== 'boolean' ||
+      typeof result.can_switch !== 'boolean' ||
+      (result.expires_at !== null && !Number.isFinite(Date.parse(result.expires_at)))
+    ) {
+      throw new WebsiteError('response', 'Payment status could not be checked. Please try again.');
+    }
+    return result;
+  }
+
+  async switchPayu(orderId: string): Promise<string> {
+    const path = this.payuPath(orderId);
+    const owner = this.profile()?.id ?? '';
+    const result = await this.api.request<{ kind: string }>(
+      path + '/switch',
+      'POST',
+      undefined,
+      crypto.randomUUID(),
+    );
+    if (
+      !this.isPaymentOwner(owner) ||
+      ![
+        'pay_at_collection',
+        'payment_not_due',
+        'payu_checkout_pending',
+        'payu_unavailable',
+      ].includes(result?.kind)
+    )
+      throw new WebsiteError(
+        'response',
+        'Payment choice could not be changed. Check your booking status.',
+      );
+    return result.kind;
+  }
+
+  async paymentRefund(
+    orderId: string,
+  ): Promise<Pick<Order, 'refund' | 'status' | 'payment_status'> | null> {
+    const path = this.payuPath(orderId);
+    const owner = this.profile()?.id ?? '';
+    const result = await this.api.request<Order>(path.slice(0, -'/payu'.length));
+    if (!this.isPaymentOwner(owner) || result?.id !== paymentOrderId(orderId)) return null;
+    return { refund: result.refund, status: result.status, payment_status: result.payment_status };
+  }
+
+  async startPayu(orderId: string, email = ''): Promise<PayuLaunch> {
+    const path = this.payuPath(orderId);
+    const owner = this.profile()!;
+    if (this.launchingOrders.has(path)) return 'checking';
+    this.launchingOrders.add(path);
+    try {
+      const value = email.trim();
+      if (value && !owner.email) {
+        const profile = await this.patchProfile(
+          owner.name,
+          value,
+          owner.date_of_birth,
+          owner.gender,
+        );
+        if (!this.isPaymentOwner(owner.id) || profile.id !== owner.id) return 'unavailable';
+        this.profile.set(profile);
+      }
+      if (!this.isPaymentOwner(owner.id)) return 'unavailable';
+      const result = await this.api.request<{ kind: string; checkout_url?: unknown }>(
+        path + '/attempts',
+        'POST',
+        undefined,
+        crypto.randomUUID(),
+      );
+      if (!this.isPaymentOwner(owner.id)) return 'unavailable';
+      switch (result.kind) {
+        case 'payu_checkout_ready': {
+          const url = checkedPayuCheckoutUrl(result.checkout_url);
+          if (!url || !this.document.defaultView) return 'failed';
+          this.document.defaultView.location.assign(url);
+          return 'redirected';
+        }
+        case 'payu_checkout_pending':
+          return 'checking';
+        case 'payu_unavailable':
+          return 'unavailable';
+        case 'payment_not_due':
+          return 'not_due';
+        default:
+          return 'failed';
+      }
+    } catch (error) {
+      if (error instanceof WebsiteError && error.code === 'payu_email_required')
+        return 'email_required';
+      throw error;
+    } finally {
+      this.launchingOrders.delete(path);
+    }
+  }
+
   async loadOrders(): Promise<void> {
     await this.run(async () => {
       if (this.preview()) {
@@ -857,15 +1082,24 @@ export class WebsiteStore {
       this.error.set('Your report link has expired. Request a fresh link.');
     }
   }
+  private patchProfile(
+    name: string | undefined,
+    email: string | null,
+    dob: string | undefined,
+    gender: string | undefined,
+  ) {
+    return this.api.request<Profile>('/me', 'PATCH', {
+      name: name ?? null,
+      email,
+      date_of_birth: dob ?? null,
+      gender: gender ?? null,
+    });
+  }
+
   async saveProfile(name: string, dob: string, gender: string, phone: string): Promise<void> {
     if (this.preview()) return;
     await this.run(async () => {
-      const p = await this.api.request<Profile>('/me', 'PATCH', {
-        name,
-        email: this.profile()?.['email'] ?? null,
-        date_of_birth: dob,
-        gender,
-      });
+      const p = await this.patchProfile(name, this.profile()?.email ?? null, dob, gender);
       this.profile.set(p);
       if (phone) await this.api.request('/me/mobile', 'PUT', { phone });
       await this.loadAccount();
