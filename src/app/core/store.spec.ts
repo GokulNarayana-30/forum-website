@@ -132,8 +132,8 @@ describe('Customer website booking boundaries', () => {
     expect(store.held()).toBe(false);
     expect(store.consent()).toBe(false);
   });
-  it('has three steps: patients & address, slot & preparation, coupon & review', () => {
-    expect(steps).toEqual(['Patients & address', 'Slot & preparation', 'Coupon & review']);
+  it('has three steps: patients & address, collection time, coupon & review', () => {
+    expect(steps).toEqual(['Patients & address', 'Collection time', 'Coupon & review']);
     expect(CHECKOUT_STEP).toEqual({ people: 0, slot: 1, review: 2 });
   });
   it('leaves patients & address only with an address that has collection times', async () => {
@@ -161,6 +161,26 @@ describe('Customer website booking boundaries', () => {
     expect(store.step()).toBe(CHECKOUT_STEP.review);
     expect(await store.next()).toBe(true);
     expect(store.step()).toBe(CHECKOUT_STEP.review);
+  });
+  // Owner, 2026-11-22: preparation matters only when a test needs fasting.
+  it('a booking with no fasting test needs no preparation tick to continue or to book', async () => {
+    liveCheckout();
+    store.preparationRead.set(false);
+    store.snapshot.set({ preparation: { fasting_required: false, instructions: [] } } as never);
+    expect(store.needsFasting()).toBe(false);
+    store.step.set(CHECKOUT_STEP.slot);
+    api.request.mockResolvedValue({ cart: { id: 'cart-a', lines: store.lines() }, people: [], quote: store.quote() });
+    expect(await store.next()).toBe(true);
+    expect(store.step()).toBe(CHECKOUT_STEP.review);
+  });
+  it('a fasting booking still needs the fasting note acknowledged before it continues', async () => {
+    liveCheckout();
+    store.preparationRead.set(false);
+    store.snapshot.set({ preparation: { fasting_required: true, fasting_hours_min: 10, fasting_hours_max: 12 } } as never);
+    expect(store.needsFasting()).toBe(true);
+    store.step.set(CHECKOUT_STEP.slot);
+    expect(await store.next()).toBe(false);
+    expect(store.step()).toBe(CHECKOUT_STEP.slot);
   });
   it('places a live booking using server quote IDs and total, never client amounts', async () => {
     liveCheckout();

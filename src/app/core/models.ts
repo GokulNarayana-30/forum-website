@@ -204,7 +204,7 @@ export function itemImage(item: Item): string {
   const cat = (item.category_ids?.[0] ?? '').replace(/^cat-/, 'cat_').replace(/-/g, '_');
   return KNOWN_IMAGES.has(cat) ? `assets/${cat}.webp` : 'assets/banner_home_collection.webp';
 }
-export const steps = ['Patients & address', 'Slot & preparation', 'Coupon & review'];
+export const steps = ['Patients & address', 'Collection time', 'Coupon & review'];
 /** The checkout steps by name, so no screen or rule depends on a bare index. */
 export const CHECKOUT_STEP = { people: 0, slot: 1, review: 2 } as const;
 

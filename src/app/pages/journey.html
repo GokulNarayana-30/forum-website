@@ -588,37 +588,22 @@
                       }}
                     </p>
                   }
-                  <h3 class="step-section">A little preparation helps</h3>
-                  @if (store.preview()) {
-                    <p>
-                      Preparation in this preview is not confirmed medical advice. Live instructions
-                      will be combined by the server for your selected tests.
+                  <!-- Fasting only when a test needs it (owner, 2026-11-22): a popup, then this reminder. -->
+                  @if (store.needsFasting()) {
+                    <p class="fasting-reminder">
+                      <strong>Fasting required</strong> · {{ fastingHoursShort() }}
+                      <button class="text-link" type="button" (click)="fastingOpen.set(true)">
+                        View instructions
+                      </button>
                     </p>
-                  } @else {
-                    @for (
-                      instruction of store.snapshot()?.preparation?.instructions ?? [];
-                      track instruction
-                    ) {
-                      <p class="preparation-item">{{ instruction }}</p>
-                    }
-                    @if (store.snapshot()?.preparation?.confirmation_pending) {
-                      <p>
-                        Some preparation instructions need confirmation from the lab when you book.
-                      </p>
-                    }
                   }
-                  <p class="notice-box">
-                    Confirm fasting instructions with the lab. Do not change prescribed medicines
-                    without your clinician’s advice.
-                  </p>
-                  <label class="check"
-                    ><input
-                      type="checkbox"
-                      [disabled]="!store.canEdit()"
-                      [ngModel]="store.preparationRead()"
-                      (ngModelChange)="store.preparationRead.set($event)"
-                    /><span>I have read the preparation information.</span></label
-                  >
+                  <forum-fasting-dialog
+                    [open]="fastingOpen()"
+                    [minHours]="fastingHours().min"
+                    [maxHours]="fastingHours().max"
+                    [instructions]="store.snapshot()?.preparation?.instructions ?? []"
+                    (acknowledged)="acknowledgeFasting()"
+                  />
                 }
                 @case (STEP.review) {
                   <h3 class="step-section first">Have a coupon?</h3>
@@ -735,7 +720,9 @@
                     /><span
                       >I consent to the selected diagnostic tests and home sample collection for the
                       listed patients, and confirm I am authorised to book for them. I have read the
-                      preparation information and <a routerLink="/privacy">privacy notice</a>.</span
+                      {{ store.needsFasting() ? 'fasting instructions and ' : '' }}<a routerLink="/privacy"
+                        >privacy notice</a
+                      >.</span
                     ></label
                   >
                   <p class="hint">

@@ -106,6 +106,17 @@ export class WebsiteStore {
   readonly step = signal(0);
   readonly consent = signal(false);
   readonly preparationRead = signal(false);
+  /**
+   * Whether any test in the booking needs fasting (owner, 2026-11-22): only then is the fasting note
+   * shown and acknowledged. Live: the server's preparation summary; preview: the sample catalogue.
+   */
+  readonly needsFasting = computed(() => {
+    const preparation = this.snapshot()?.preparation;
+    if (preparation) return preparation.fasting_required === true;
+    return this.lines().some((line) => this.items().find((item) => item.id === line.item_id)?.fasting_required === true);
+  });
+  /** The preparation acknowledgement is needed only for a fasting booking. */
+  private readonly preparationDone = computed(() => !this.needsFasting() || this.preparationRead());
   readonly orders = signal<Order[]>([]);
   readonly reports = signal<Report[]>([]);
   readonly documentLink = signal<{ url: string; expiresAt: number } | null>(null);
@@ -679,8 +690,8 @@ export class WebsiteStore {
         this.error.set('Choose an available collection slot.');
         return false;
       }
-      if (!this.preparationRead()) {
-        this.error.set('Please confirm you have read the preparation instructions.');
+      if (!this.preparationDone()) {
+        this.error.set('Please read the fasting instructions before you continue.');
         return false;
       }
       if (!this.preview()) {
@@ -749,7 +760,7 @@ export class WebsiteStore {
       if (this.preview()) {
         if (
           !this.consent() ||
-          !this.preparationRead() ||
+          !this.preparationDone() ||
           !this.slot() ||
           !this.address() ||
           !this.lines().length
@@ -776,7 +787,7 @@ export class WebsiteStore {
           !slot ||
           !this.consent() ||
           !this.consentAt ||
-          !this.preparationRead() ||
+          !this.preparationDone() ||
           !this.held() ||
           this.hasIssues() ||
           this.priceChanged()

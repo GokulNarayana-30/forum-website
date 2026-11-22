@@ -36,9 +36,10 @@ import { Summary } from './summary';
 import { BookingStatus } from './booking-status';
 import { Account } from './account';
 import { PhoneCode } from './phone-code';
+import { FastingDialog } from './fasting-dialog';
 @Component({
   selector: 'forum-journey',
-  imports: [FormsModule, RouterLink, Summary, BookingStatus, Account, PhoneCode],
+  imports: [FormsModule, RouterLink, Summary, BookingStatus, Account, PhoneCode, FastingDialog],
   templateUrl: './journey.html',
   styleUrl: './journey.scss',
 })
@@ -72,6 +73,28 @@ export class Journey {
   protected readonly itemPrice = itemPrice;
   protected readonly steps = steps;
   protected readonly STEP = CHECKOUT_STEP;
+  /** The fasting popup (owner, 2026-11-22): opens by itself on the time step of a fasting booking. */
+  protected readonly fastingOpen = signal(false);
+  protected readonly fastingHours = computed(() => {
+    const preparation = this.store.snapshot()?.preparation;
+    if (preparation) return { min: preparation.fasting_hours_min ?? null, max: preparation.fasting_hours_max ?? null };
+    const fasting = this.store
+      .lines()
+      .map((line) => this.store.items().find((item) => item.id === line.item_id))
+      .filter((item) => item?.fasting_required);
+    const mins = fasting.map((item) => item?.fasting_hours_min ?? 0).filter(Boolean);
+    const maxes = fasting.map((item) => item?.fasting_hours_max ?? 0).filter(Boolean);
+    return { min: mins.length ? Math.max(...mins) : null, max: maxes.length ? Math.max(...maxes) : null };
+  });
+  protected fastingHoursShort(): string {
+    const { min, max } = this.fastingHours();
+    if (min && max && max > min) return `${min}–${max} hours`;
+    return min || max ? `at least ${min || max} hours` : 'as the lab instructs';
+  }
+  protected acknowledgeFasting(): void {
+    this.store.preparationRead.set(true);
+    this.fastingOpen.set(false);
+  }
   protected readonly slotTimeRange = slotTimeRange;
   /** The day tab the customer picked; until then the held slot's day or the first day with open times. */
   protected readonly chosenDay = signal<string | null>(null);
@@ -155,6 +178,15 @@ export class Journey {
         name: 'robots',
         content: ['tests', 'detail'].includes(view) ? 'index,follow' : 'noindex,nofollow',
       });
+    });
+    // Open the fasting popup once on the time step of a fasting booking, until it is read.
+    effect(() => {
+      const open =
+        this.view() === 'checkout' &&
+        this.store.step() === CHECKOUT_STEP.slot &&
+        this.store.needsFasting() &&
+        !this.store.preparationRead();
+      if (open && isPlatformBrowser(this.platformId)) untracked(() => this.fastingOpen.set(true));
     });
     effect(() => {
       const signedIn = this.store.signedIn();
