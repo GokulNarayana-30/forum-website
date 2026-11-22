@@ -18,6 +18,7 @@ const status = {
 describe('Website payment return', () => {
   let read: ReturnType<typeof vi.fn>;
   let booking: ReturnType<typeof vi.fn>;
+  let start: ReturnType<typeof vi.fn>;
   let switchPayu: ReturnType<typeof vi.fn>;
   const signedIn = signal(true);
   const profile = signal<{ id: string } | null>({ id: 'owner-one' });
@@ -44,6 +45,7 @@ describe('Website payment return', () => {
             paymentStatus: read,
             paymentBooking: booking,
             switchPayu,
+            startPayu: start,
           },
         },
       ],
@@ -58,6 +60,7 @@ describe('Website payment return', () => {
     signedIn.set(true);
     profile.set({ id: 'owner-one' });
     read = vi.fn().mockResolvedValue(status);
+    start = vi.fn().mockResolvedValue('failed');
     booking = vi.fn().mockResolvedValue({
       booking_ref: 'FL-2026-000022',
       total_paise: 45000,
@@ -168,6 +171,23 @@ describe('Website payment return', () => {
     fixture.detectChanges();
     expect(check().textContent).toContain('Check status');
     expect(fixture.nativeElement.textContent).toMatch(/Checked at .+ IST\. No change yet\./);
+  });
+
+  // Owner test, 2026-11-22: PayU's test system did not answer, so no payment started.
+  it('says PayU could not be reached and nothing was charged when a start fails, once', async () => {
+    read.mockResolvedValue({ ...status, payment_state: 'retryable', can_retry: true, can_switch: true });
+    const fixture = mount();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const retry = [...(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)]
+      .find((button) => button.textContent?.includes('Try payment again'))!;
+    retry.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('We couldn’t reach PayU just now');
+    expect(text).toContain('nothing was charged');
+    expect(text).not.toContain('Your payment didn’t go through');
   });
 
   it('names an unfinished payment plainly and offers the retry', async () => {

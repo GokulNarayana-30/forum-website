@@ -357,6 +357,8 @@ export class PaymentStatus {
   });
   protected readonly lead = computed(() => {
     const status = this.status();
+    // A failed start has its own, more accurate note: do not repeat "didn't go through" above it.
+    if (this.feedback() === 'failed') return '';
     switch (status?.payment_state) {
       case 'paid':
         return 'Thank you. Your home collection is booked and paid. We’ll keep you updated as your collection time approaches.';
@@ -546,7 +548,10 @@ export class PaymentStatus {
     this.feedback.set(kind);
     if (kind === 'email_required') this.message.set('Enter your email to continue online payment.');
     if (kind === 'failed')
-      this.message.set('Payment didn’t go through. Try again, or pay at collection instead.');
+      // The start itself failed (PayU did not answer or refused): no payment began.
+      this.message.set(
+        'We couldn’t reach PayU just now, so the payment didn’t start and nothing was charged. Try again in a few minutes, or pay at collection.',
+      );
     if (kind === 'unavailable') this.message.set('Online payment is currently unavailable.');
     if (kind === 'checking' || kind === 'not_due')
       this.message.set('Checking your payment. Please wait for the booking status.');
