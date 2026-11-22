@@ -422,7 +422,16 @@
       </div>
     }
     @case ('checkout') {
-      @if (!store.signedIn()) {
+      @if (store.payuRedirecting(); as orderId) {
+        <div class="empty-state payu-redirect" role="status" aria-live="polite">
+          <span class="redirect-spinner" aria-hidden="true"></span>
+          <h1>Taking you to secure payment…</h1>
+          <p>Your booking is saved. PayU's payment page will open in a moment.</p>
+          <a class="text-link" routerLink="/payment-status" [queryParams]="{ order: orderId }"
+            >Payment page not opening? Check payment status</a
+          >
+        </div>
+      } @else if (!store.signedIn()) {
         <div class="empty-state">
           <h1>Let’s keep your care secure.</h1>
           <p>Sign in before choosing patients and a collection address.</p>

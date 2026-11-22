@@ -135,6 +135,12 @@ export class WebsiteStore {
   );
   readonly paymentOrder = signal<Order | null>(null);
   readonly initialPayuFeedback = signal<{ orderId: string; kind: PayuLaunch } | null>(null);
+  /**
+   * The order whose PayU page the browser is opening. The cart is already
+   * empty by then, so checkout shows "Taking you to secure payment" for these
+   * seconds instead of "Your cart is empty" (owner, 2026-11-22).
+   */
+  readonly payuRedirecting = signal<string | null>(null);
   private readonly launchingOrders = new Set<string>();
   readonly attempt = signal<Attempt | null>(null);
   readonly holdExpires = signal(0);
@@ -158,6 +164,7 @@ export class WebsiteStore {
     });
   }
   private clearPrivateState(): void {
+    this.payuRedirecting.set(null);
     this.profile.set(null);
     this.people.set([]);
     this.addresses.set([]);
@@ -1039,6 +1046,7 @@ export class WebsiteStore {
         case 'payu_checkout_ready': {
           const url = checkedPayuCheckoutUrl(result.checkout_url);
           if (!url || !this.document.defaultView) return 'failed';
+          this.payuRedirecting.set(orderId);
           this.document.defaultView.location.assign(url);
           return 'redirected';
         }

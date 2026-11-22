@@ -4,7 +4,7 @@ import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/route
 import { of } from 'rxjs';
 import { checkedPayuCheckoutUrl } from '../core/store';
 import { WebsiteStore } from '../core/store';
-import { PaymentStatus } from './payment-status';
+import { PaymentStatus, appReturnLink } from './payment-status';
 
 const orderId = 'abcdabcd-abcd-4bcd-8bcd-abcdabcdabcd';
 const status = {
@@ -22,7 +22,7 @@ describe('Website payment return', () => {
   let switchPayu: ReturnType<typeof vi.fn>;
   const signedIn = signal(true);
   const profile = signal<{ id: string } | null>({ id: 'owner-one' });
-  function mount({ platform = 'browser', id = orderId, embedded = false } = {}) {
+  function mount({ platform = 'browser', id = orderId, embedded = false, app = false } = {}) {
     TestBed.configureTestingModule({
       imports: [PaymentStatus],
       providers: [
@@ -31,7 +31,14 @@ describe('Website payment return', () => {
         {
           provide: ActivatedRoute,
           useValue: {
-            queryParamMap: of(convertToParamMap({ order: id, status: 'success', txnid: 'ignore' })),
+            queryParamMap: of(
+              convertToParamMap({
+                order: id,
+                status: 'success',
+                txnid: 'ignore',
+                ...(app ? { app: '1' } : {}),
+              }),
+            ),
           },
         },
         {
@@ -72,6 +79,31 @@ describe('Website payment return', () => {
     switchPayu = vi.fn().mockResolvedValue('payu_checkout_pending');
   });
   afterEach(() => TestBed.resetTestingModule());
+
+  describe('a payment started in the app (owner, 2026-11-22)', () => {
+    it('hands back to the app instead of asking to sign in', () => {
+      signedIn.set(false);
+      const fixture = mount({ platform: 'server', app: true });
+      const text = fixture.nativeElement.textContent as string;
+      expect(text).toContain('Taking you back to the Forum Labs app');
+      expect(text).not.toContain('Sign in');
+      const link = fixture.nativeElement.querySelector('a.button') as HTMLAnchorElement;
+      expect(link.getAttribute('href')).toBe(appReturnLink(orderId));
+    });
+
+    it('the link opens only the Forum Labs app with a checked order id, else My bookings', () => {
+      expect(appReturnLink(orderId)).toBe(
+        `intent://app/payment-return?order=${orderId}#Intent;scheme=forumlabs;` +
+          'package=com.forumhospital.forum_labs;S.browser_fallback_url=https%3A%2F%2Fforumlabs.in%2Fbookings;end',
+      );
+      expect(appReturnLink(null)).toContain('intent://app/payment-return#Intent;');
+    });
+
+    it('a booking card on the website never shows it, even with app=1', () => {
+      const fixture = mount({ platform: 'server', app: true, embedded: true });
+      expect(fixture.nativeElement.textContent).not.toContain('Taking you back to the Forum Labs app');
+    });
+  });
 
   it('accepts only the hosted checkout URL shape from the API', () => {
     const valid = 'https://apitest.payu.in/public/#/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';

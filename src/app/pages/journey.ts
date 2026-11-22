@@ -42,6 +42,7 @@ import { FastingDialog } from './fasting-dialog';
   imports: [FormsModule, RouterLink, Summary, BookingStatus, Account, PhoneCode, FastingDialog],
   templateUrl: './journey.html',
   styleUrl: './journey.scss',
+  host: { '(window:pageshow)': 'onPageShow($event)' },
 })
 export class Journey {
   protected readonly store = inject(WebsiteStore);
@@ -237,6 +238,16 @@ export class Journey {
       return;
     }
     await this.router.navigateByUrl(this.nextReturn() ?? '/checkout');
+  }
+  /**
+   * Back from PayU's page restores this page from the browser's cache, still
+   * saying "Taking you to secure payment". Show the booking's payment status instead.
+   */
+  protected onPageShow(event: PageTransitionEvent): void {
+    const orderId = this.store.payuRedirecting();
+    if (!event.persisted || !orderId) return;
+    this.store.payuRedirecting.set(null);
+    void this.router.navigate(['/payment-status'], { queryParams: { order: orderId } });
   }
   protected async place(): Promise<void> {
     const ok = await this.store.place(this.paymentEmail);

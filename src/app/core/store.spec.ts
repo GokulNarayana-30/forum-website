@@ -227,6 +227,34 @@ describe('Customer website booking boundaries', () => {
     expect(store.paymentOrder()?.id).toBe(pendingOrder.id);
   });
 
+  it('marks the order as opening PayU, so checkout does not flash an empty cart', async () => {
+    liveCheckout();
+    store.onlinePaymentEnabled.set(true);
+    api.request
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ kind: 'order_placed', order: pendingOrder })
+      .mockResolvedValueOnce({
+        kind: 'payu_checkout_ready',
+        checkout_url: 'https://apitest.payu.in/public/#/abc123',
+      });
+    expect(store.payuRedirecting()).toBeNull();
+    expect(await store.place()).toBe(true);
+    expect(store.lines()).toEqual([]);
+    expect(store.payuRedirecting()).toBe(pendingOrder.id);
+    expect(store.initialPayuFeedback()).toEqual({ orderId: pendingOrder.id, kind: 'redirected' });
+  });
+
+  it('does not mark a redirect when PayU is not ready', async () => {
+    liveCheckout();
+    store.onlinePaymentEnabled.set(true);
+    api.request
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ kind: 'order_placed', order: pendingOrder })
+      .mockResolvedValueOnce({ kind: 'payu_checkout_pending' });
+    expect(await store.place()).toBe(true);
+    expect(store.payuRedirecting()).toBeNull();
+  });
+
   it('saves an optional email with the full profile and prompts only for the email refusal', async () => {
     liveCheckout();
     store.onlinePaymentEnabled.set(true);

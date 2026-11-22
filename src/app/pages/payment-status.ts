@@ -1,4 +1,4 @@
-import { isPlatformBrowser } from '@angular/common';
+import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import {
   Component,
   DestroyRef,
@@ -12,7 +12,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { Meta } from '@angular/platform-browser';
+import { DomSanitizer, Meta, SafeUrl } from '@angular/platform-browser';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
   instant,
@@ -31,10 +31,36 @@ const MAX_CHECKS = 8;
 const MAX_PROCESSING_CHECKS = 40;
 const POLL_MS = 3000;
 
+/** The Android link back into the app (`forumlabs://app/payment-return`), with a website fallback. */
+export function appReturnLink(orderId: string | null): string {
+  const query = orderId ? `?order=${orderId}` : '';
+  const fallback = encodeURIComponent('https://forumlabs.in/bookings');
+  return (
+    `intent://app/payment-return${query}` +
+    `#Intent;scheme=forumlabs;package=com.forumhospital.forum_labs;S.browser_fallback_url=${fallback};end`
+  );
+}
+
 @Component({
   selector: 'forum-payment-status',
   imports: [RouterLink, FormsModule],
   template: `
+    @if (forApp()) {
+      <!-- A payment started in the app ends here (owner, 2026-11-22): hand back to the app, never ask to sign in. -->
+      <section class="pay-card" aria-label="Back to the app" aria-live="polite">
+        <div class="pay-icon processing" aria-hidden="true">
+          <span class="processing-spinner"></span>
+        </div>
+        <h2>Taking you back to the Forum Labs app…</h2>
+        <p class="pay-lead">
+          Your payment is being confirmed. The app shows the result as soon as PayU confirms it.
+        </p>
+        <div class="pay-actions">
+          <a class="button" [href]="appLink()">Open the Forum Labs app</a>
+        </div>
+        <p class="pay-note">If the app does not open, close this page to go back to it.</p>
+      </section>
+    } @else {
     <section
       class="pay-card"
       [class.embedded]="embedded()"
@@ -172,6 +198,7 @@ const POLL_MS = 3000;
         </div>
       }
     </section>
+    }
   `,
   styles: `
     :host {
@@ -326,6 +353,19 @@ export class PaymentStatus {
   private readonly platform = inject(PLATFORM_ID);
   private readonly params = signal<string | null>(null);
   protected readonly activeId = computed(() => paymentOrderId(this.orderId() ?? this.params()));
+  /** Opened by PayU's return for a payment started in the app (`app=1`), never inside a booking card. */
+  private readonly appReturn = signal(false);
+  protected readonly forApp = computed(() => !this.orderId() && this.appReturn());
+  private readonly sanitizer = inject(DomSanitizer);
+  private readonly document = inject(DOCUMENT);
+  /**
+   * The app's own link, with only a checked order id: Android opens the Forum Labs app (closing this tab);
+   * a phone without the app falls back to My bookings on this website.
+   */
+  private readonly rawAppLink = computed(() => appReturnLink(paymentOrderId(this.params())));
+  protected readonly appLink = computed<SafeUrl>(() =>
+    this.sanitizer.bypassSecurityTrustUrl(this.rawAppLink()),
+  );
   protected readonly status = signal<PaymentStatusView | null>(null);
   protected readonly feedback = signal<PayuLaunch | null>(null);
   protected readonly email = signal('');
@@ -431,6 +471,13 @@ export class PaymentStatus {
     route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((query) => {
       const ids = query.getAll('order');
       this.params.set(ids.length === 1 ? ids[0] : null);
+      this.appReturn.set(query.get('app') === '1');
+    });
+    // Try the app straight away; the button stays for a browser that wants a tap first.
+    effect(() => {
+      if (!this.forApp() || !isPlatformBrowser(this.platform)) return;
+      const link = this.rawAppLink();
+      untracked(() => this.document.defaultView?.location.assign(link));
     });
     inject(DestroyRef).onDestroy(() => this.stop());
     effect(() => {
