@@ -776,6 +776,11 @@
                 }
               </div>
             </section>
+            <forum-online-off-dialog
+              [open]="onlineOffOpen()"
+              (book)="bookAtCollection()"
+              (dismissed)="onlineOffOpen.set(false)"
+            />
             <forum-summary />
           </div>
         }

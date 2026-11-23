@@ -37,9 +37,10 @@ import { BookingStatus } from './booking-status';
 import { Account } from './account';
 import { PhoneCode } from './phone-code';
 import { FastingDialog } from './fasting-dialog';
+import { OnlineOffDialog } from './online-off-dialog';
 @Component({
   selector: 'forum-journey',
-  imports: [FormsModule, RouterLink, Summary, BookingStatus, Account, PhoneCode, FastingDialog],
+  imports: [FormsModule, RouterLink, Summary, BookingStatus, Account, PhoneCode, FastingDialog, OnlineOffDialog],
   templateUrl: './journey.html',
   styleUrl: './journey.scss',
   host: { '(window:pageshow)': 'onPageShow($event)' },
@@ -76,6 +77,8 @@ export class Journey {
   protected readonly STEP = CHECKOUT_STEP;
   /** The fasting popup (owner, 2026-11-22): opens by itself on the time step of a fasting booking. */
   protected readonly fastingOpen = signal(false);
+  /** Online payment is down: Confirm asks first (owner, 2026-11-23). */
+  protected readonly onlineOffOpen = signal(false);
   protected readonly fastingHours = computed(() => {
     const preparation = this.store.snapshot()?.preparation;
     if (preparation) return { min: preparation.fasting_hours_min ?? null, max: preparation.fasting_hours_max ?? null };
@@ -250,6 +253,17 @@ export class Journey {
     void this.router.navigate(['/payment-status'], { queryParams: { order: orderId } });
   }
   protected async place(): Promise<void> {
+    if (this.store.showOnlinePaymentOff()) {
+      this.onlineOffOpen.set(true);
+      return;
+    }
+    await this.placeBooking();
+  }
+  protected async bookAtCollection(): Promise<void> {
+    this.onlineOffOpen.set(false);
+    await this.placeBooking();
+  }
+  private async placeBooking(): Promise<void> {
     const ok = await this.store.place(this.paymentEmail);
     if (!ok) return;
     this.paymentEmail = '';
