@@ -101,6 +101,31 @@ describe('Customer website booking boundaries', () => {
     total_paise: 15000,
     patients: [],
   };
+  describe('online payment off note (owner, 2026-11-23)', () => {
+    const refresh = () =>
+      (store as unknown as { refreshPaymentPolicy(): Promise<void> }).refreshPaymentPolicy();
+    it('shows when the server answers that online payment is off', async () => {
+      liveCheckout();
+      api.request.mockResolvedValue({ cancellation_policy: 'Policy', online_payment_enabled: false });
+      await refresh();
+      expect(store.canPayOnline()).toBe(false);
+      expect(store.showOnlinePaymentOff()).toBe(true);
+    });
+    it('stays hidden when online payment is on, or the policy could not be read', async () => {
+      liveCheckout();
+      api.request.mockResolvedValue({ cancellation_policy: 'Policy', online_payment_enabled: true });
+      await refresh();
+      expect(store.showOnlinePaymentOff()).toBe(false);
+      api.request.mockRejectedValue(new Error('offline'));
+      await refresh();
+      expect(store.showOnlinePaymentOff()).toBe(false);
+    });
+    it('stays hidden in preview mode', async () => {
+      api.request.mockResolvedValue({ cancellation_policy: 'Policy', online_payment_enabled: false });
+      await refresh();
+      expect(store.showOnlinePaymentOff()).toBe(false);
+    });
+  });
   it('preview completion makes no server request and no fake booking', async () => {
     store.terms.set(true);
     await store.signIn();

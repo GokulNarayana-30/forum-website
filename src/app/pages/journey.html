@@ -696,6 +696,12 @@
                     } @else {
                       <p>Pay at collection (cash or UPI)</p>
                     }
+                    @if (store.showOnlinePaymentOff()) {
+                      <p class="notice-box" data-testid="online-payment-off">
+                        Online payment is unavailable right now. You can book and pay the
+                        phlebotomist at collection, or try again later.
+                      </p>
+                    }
                     <p>
                       {{
                         store.preview()

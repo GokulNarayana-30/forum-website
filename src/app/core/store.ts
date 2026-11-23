@@ -126,6 +126,12 @@ export class WebsiteStore {
   readonly terms = signal(false);
   readonly policy = signal('');
   readonly onlinePaymentEnabled = signal(false);
+  /** The server answered that online payment is off (PayU unreachable or switched off), not merely "not loaded yet". */
+  readonly onlinePaymentOff = signal(false);
+  /** Review says online payment is off instead of the option silently vanishing (owner, 2026-11-23). */
+  readonly showOnlinePaymentOff = computed(
+    () => !this.preview() && this.onlinePaymentOff() && (this.quote()?.to_pay_paise ?? 0) > 0,
+  );
   readonly canPayOnline = computed(
     () => !this.preview() && this.onlinePaymentEnabled() && (this.quote()?.to_pay_paise ?? 0) > 0,
   );
@@ -180,6 +186,7 @@ export class WebsiteStore {
     this.paymentOrder.set(null);
     this.initialPayuFeedback.set(null);
     this.onlinePaymentEnabled.set(false);
+    this.onlinePaymentOff.set(false);
     this.preferredPayment.set('payu');
     this.attempt.set(null);
     this.step.set(CHECKOUT_STEP.people);
@@ -549,6 +556,7 @@ export class WebsiteStore {
   }
   private async refreshPaymentPolicy(): Promise<void> {
     this.onlinePaymentEnabled.set(false);
+    this.onlinePaymentOff.set(false);
     try {
       const policy = await this.api.request<{
         cancellation_policy: string;
@@ -556,6 +564,7 @@ export class WebsiteStore {
       }>('/checkout/policy');
       this.policy.set(policy.cancellation_policy);
       this.onlinePaymentEnabled.set(policy.online_payment_enabled === true);
+      this.onlinePaymentOff.set(policy.online_payment_enabled !== true);
     } catch {
       // Without an affirmative policy, checkout only offers payment at collection.
     }
@@ -579,6 +588,7 @@ export class WebsiteStore {
     this.paymentOrder.set(null);
     this.initialPayuFeedback.set(null);
     this.onlinePaymentEnabled.set(false);
+    this.onlinePaymentOff.set(false);
     this.preferredPayment.set('payu');
     this.attempt.set(null);
     this.step.set(CHECKOUT_STEP.people);
@@ -865,6 +875,7 @@ export class WebsiteStore {
           error.code === 'payment_choice_unavailable'
         ) {
           this.onlinePaymentEnabled.set(false);
+          this.onlinePaymentOff.set(true);
           this.clearAttempt();
           this.setConsent(false);
         }
