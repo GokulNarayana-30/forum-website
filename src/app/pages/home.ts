@@ -3,7 +3,7 @@ import { Meta } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { RouterLink, Router } from '@angular/router';
 import { WebsiteStore } from '../core/store';
-import { image, itemImage, money, itemPrice } from '../core/models';
+import { Item, image, itemImage, money, itemPrice } from '../core/models';
 import { HomeBanners } from './home-banners';
 @Component({
   selector: 'forum-home',
@@ -26,4 +26,10 @@ export class Home {
   protected readonly itemImage = itemImage;
   protected readonly money = money;
   protected readonly itemPrice = itemPrice;
+  protected inCart(itemId: string): boolean {
+    return this.store.lines().some((line) => line.item_id === itemId && line.person_id === 'me');
+  }
+  protected addToCart(item: Item): void {
+    void this.store.add(item);
+  }
 }

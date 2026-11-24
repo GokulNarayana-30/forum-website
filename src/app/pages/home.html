@@ -35,7 +35,9 @@
           >See how it works <span aria-hidden="true">→</span></a
         >
       </div>
-      <p class="hero-note"><span aria-hidden="true">✳</span> Cash or UPI at collection</p>
+      <p class="hero-note">
+        <span aria-hidden="true">✳</span> Pay online (UPI, cards, netbanking) or at collection
+      </p>
     </div>
     <div class="hero-art">
       <div class="art-top">
@@ -62,7 +64,7 @@
   <div class="principles shell">
     <p><span aria-hidden="true">01</span> Explore tests at your pace</p>
     <p><span aria-hidden="true">02</span> Check availability before booking</p>
-    <p><span aria-hidden="true">03</span> Pay at collection</p>
+    <p><span aria-hidden="true">03</span> Pay online or at collection</p>
   </div>
   <section class="catalog section shell" id="tests" aria-labelledby="tests-heading">
     <div class="section-heading">
@@ -75,7 +77,7 @@
     <div class="test-grid">
       @for (item of featured(); track item.id) {
         <article class="test-card">
-          <a [routerLink]="['/tests', item.id]"
+          <a class="test-card-link" [routerLink]="['/tests', item.id]"
             ><div class="test-top">
               <span class="eyebrow">{{ item.kind === 'package' ? 'PACKAGE' : 'LAB TEST' }}</span
               ><img
@@ -96,9 +98,24 @@
                   : item.sample_type
               }}
             </p>
-            <p class="home-price">{{ money(itemPrice(item)) }}</p>
-            <span class="detail-button">Explore details <span aria-hidden="true">→</span></span></a
+            <p class="home-price">
+              <strong>{{ money(itemPrice(item)) }}</strong>
+              @if (item.offer_price_paise && item.offer_price_paise < item.mrp_paise) {
+                <s>{{ money(item.mrp_paise) }}</s>
+              }
+            </p></a
           >
+          <div class="test-card-actions">
+            <a class="text-link" [routerLink]="['/tests', item.id]">Details →</a>
+            <button
+              type="button"
+              class="button compact"
+              [class.outline]="inCart(item.id)"
+              (click)="addToCart(item)"
+            >
+              {{ inCart(item.id) ? 'In cart' : '+ Add' }}
+            </button>
+          </div>
         </article>
       }
     </div>
@@ -147,7 +164,9 @@
           <span class="step-number">03</span>
           <div>
             <h3>Have your sample collected</h3>
-            <p>Pay the phlebotomist by cash or UPI at collection. There’s no online payment.</p>
+            <p>
+              Pay online securely with PayU, or pay the phlebotomist by cash or UPI at collection.
+            </p>
           </div>
         </li>
         <li>
@@ -173,19 +192,22 @@
       <details>
         <summary>Can I book on the website today?</summary>
         <p>
-          You can explore the booking journey in preview mode. No booking is created in preview.
-          Live bookings require Forum’s API and sign-in configuration.
+          Yes. Choose your tests, enter your collection address and slot, and confirm your booking
+          right here. You can track your visit and download reports from your account.
         </p>
       </details>
       <details>
         <summary>Do I need to pay online?</summary>
-        <p>No. Payment is at collection, by cash or UPI to the phlebotomist.</p>
+        <p>
+          It is up to you. You can pay online securely via UPI, card, or netbanking, or choose to
+          pay the phlebotomist by cash or UPI at collection.
+        </p>
       </details>
       <details>
         <summary>Is home collection available in my area?</summary>
         <p>
-          Availability depends on your pincode and collection slots. The website will check these
-          with Forum’s API before you book; this preview cannot confirm serviceability.
+          Enter your pincode or pick your location during checkout to check live home-collection
+          availability and open time slots for your address.
         </p>
       </details>
       <details>
@@ -198,8 +220,8 @@
       <details>
         <summary>How will I receive my report?</summary>
         <p>
-          Released reports will be available through secure, short-lived links after sign-in. This
-          preview does not contain patient reports.
+          Released reports are available under Reports after you sign in, served through secure,
+          short-lived links.
         </p>
       </details>
     </div>

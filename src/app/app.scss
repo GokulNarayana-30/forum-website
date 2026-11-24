@@ -29,7 +29,7 @@
 nav {
   display: flex;
   gap: 23px;
-  font-size: 12px;
+  font-size: 14px;
 }
 nav a {
   padding: 8px 0;
@@ -68,9 +68,9 @@ nav a.selected {
 .announcement {
   text-align: center;
   background: var(--blush-light);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--primary);
-  padding: 5px 18px;
+  padding: 6px 18px;
 }
 .preview-banner {
   text-align: center;
@@ -105,10 +105,12 @@ nav a.selected {
 .footer {
   display: flex;
   justify-content: space-between;
+  align-items: start;
   gap: 25px;
-  font-size: 10px;
+  font-size: 13px;
   color: var(--body);
-  padding-block: 45px calc(110px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border);
+  padding-block: 40px calc(110px + env(safe-area-inset-bottom));
 }
 .footer strong,
 .footer a {
@@ -116,6 +118,25 @@ nav a.selected {
 }
 .footer p {
   margin-top: 7px;
+}
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.help-unread-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--white);
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 5px;
 }
 .skip {
   position: absolute;

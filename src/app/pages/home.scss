@@ -6,9 +6,10 @@
   margin-inline: auto;
 }
 .eyebrow {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 1.6px;
+  text-transform: uppercase;
   color: var(--primary);
 }
 .hero {
@@ -117,12 +118,13 @@
   border-block: 1px solid var(--border);
   padding-block: 22px;
   gap: 24px;
-  font-size: 12px;
+  font-size: 13px;
 }
 .principles span {
   color: var(--primary);
-  font-size: 10px;
-  margin-right: 15px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-right: 12px;
 }
 .section {
   padding-block: 85px;
@@ -149,19 +151,36 @@ h2 {
   gap: 18px;
 }
 .test-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--white);
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 22px;
+  padding: 20px;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+.test-card:hover {
+  border-color: var(--primary);
+  box-shadow: 0 8px 24px #714ea014;
+  transform: translateY(-2px);
+}
+.test-card-link {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 .test-top {
   display: flex;
   align-items: start;
   justify-content: space-between;
   gap: 5px;
-  min-height: 97px;
+  min-height: 90px;
 }
 .test-top .eyebrow {
-  font-size: 8px;
+  font-size: 11px;
   letter-spacing: 1px;
   padding-top: 6px;
 }
@@ -171,30 +190,34 @@ h2 {
   object-fit: contain;
 }
 .test-card h3 {
-  font-size: 18px;
-  margin: 15px 0 8px;
+  font-size: 17px;
+  margin: 12px 0 6px;
 }
-.test-card > p {
-  font-size: 11px;
+.test-card-link > p {
+  font-size: 13px;
   color: var(--body);
 }
-.detail-button {
+.home-price {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border: 0;
-  border-top: 1px solid var(--border);
-  background: none;
-  width: 100%;
-  padding: 17px 0 0;
-  margin-top: 25px;
-  text-align: left;
-  font-size: 11px;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 17px;
   color: var(--primary);
-  font-weight: 600;
 }
-.detail-button span {
-  font-size: 20px;
+.home-price s {
+  font-size: 12px;
+  color: var(--body);
+  font-weight: 400;
+}
+.test-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+  margin-top: 16px;
 }
 .how-section {
   background: var(--blush-light);
@@ -237,7 +260,7 @@ h2 {
   margin-bottom: 10px;
 }
 .steps p {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--body);
 }
 .faq-layout {
@@ -246,7 +269,7 @@ h2 {
   gap: 65px;
 }
 .faq-layout > div > p:last-child {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--body);
   margin-top: 20px;
 }
@@ -259,14 +282,14 @@ h2 {
 }
 .faqs summary {
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   list-style-position: outside;
   margin-left: 17px;
   padding-left: 7px;
 }
 .faqs details p {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--body);
   padding-top: 15px;
 }
@@ -399,66 +422,11 @@ h2 {
     font-size: 27px;
   }
 }
-.mobile-discovery,
 .mobile-intro,
 .mobile-collection-art {
   display: none;
 }
 @media (max-width: 760px) {
-  .mobile-discovery {
-    display: block;
-    padding-top: 20px;
-  }
-  .mobile-discovery h2 {
-    font-size: 20px;
-    letter-spacing: -0.5px;
-    margin: 0 0 14px;
-  }
-  .home-search {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    border: 1px solid var(--outline);
-    border-radius: 12px;
-    padding: 5px 6px 5px 12px;
-  }
-  .home-search input {
-    border: 0;
-    background: none;
-    font-size: 16px;
-    padding: 8px 0;
-    margin: 0;
-    min-width: 0;
-  }
-  .home-search button {
-    flex-shrink: 0;
-    border: 0;
-    border-radius: 9px;
-    background: var(--primary);
-    color: white;
-    min-width: 44px;
-    min-height: 44px;
-    font-size: 22px;
-  }
-  .home-categories {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    padding: 12px 2px 6px;
-    scrollbar-width: thin;
-  }
-  .home-categories a {
-    white-space: nowrap;
-    padding: 8px 13px;
-    display: flex;
-    align-items: center;
-    min-height: 44px;
-    border: 1px solid var(--border);
-    border-radius: 24px;
-    font-size: 12px;
-    color: var(--primary);
-    background: var(--blush-light);
-  }
   .hero {
     grid-template-columns: 1fr;
     padding-block: 24px;
@@ -520,16 +488,16 @@ h2 {
     height: 44px;
   }
   .test-top .eyebrow {
-    font-size: 8px;
+    font-size: 10px;
     letter-spacing: 0.6px;
   }
   .test-card h3 {
-    font-size: 14px;
+    font-size: 15px;
     line-height: 1.35;
     margin: 10px 0 6px;
   }
-  .test-card p {
-    font-size: 11px;
+  .test-card-link > p {
+    font-size: 12px;
   }
   .test-card .home-price {
     font-size: 16px;
@@ -537,10 +505,9 @@ h2 {
     color: var(--primary);
     margin-top: 8px;
   }
-  .detail-button {
+  .test-card-actions {
     margin-top: 12px;
-    padding-top: 8px;
-    font-size: 10px;
+    padding-top: 10px;
   }
   .mobile-collection-art {
     display: block;

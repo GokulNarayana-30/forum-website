@@ -67,21 +67,28 @@
 <footer class="shell footer">
   <div>
     <strong>FORUM LABS</strong>
-    <p>Home sample collection</p>
+    <p>Home sample collection by Forum Hospital</p>
+    <p>Book online or on the Forum Labs mobile app.</p>
   </div>
   <div>
-    <a routerLink="/terms">Terms</a> · <a routerLink="/privacy">Privacy</a> ·
-    <a routerLink="/help"
-      >Help@if (chat.unread().total_unread > 0) {<span
-          class="help-unread-badge"
-          style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--primary);color:var(--white);font-size:10px;font-weight:600;margin-left:5px"
-          [attr.aria-label]="chat.unread().total_unread + ' unread support messages'"
-          >{{ chat.unread().total_unread }}</span
-        >}</a
-    >
+    <div class="footer-links">
+      <a routerLink="/tests">Tests & packages</a> ·
+      <a routerLink="/bookings">My bookings</a> ·
+      <a routerLink="/reports">Reports</a> ·
+      <a routerLink="/help"
+        >Help@if (chat.unread().total_unread > 0) {<span
+            class="help-unread-badge"
+            [attr.aria-label]="chat.unread().total_unread + ' unread support messages'"
+            >{{ chat.unread().total_unread }}</span
+          >}</a
+      >
+      · <a routerLink="/terms">Terms</a> · <a routerLink="/privacy">Privacy</a>
+    </div>
     <p>Test information is not a diagnosis.</p>
   </div>
-  <a routerLink="/tests">Explore tests →</a>
+  <div class="footer-cta">
+    <a class="text-link" routerLink="/tests">Explore tests →</a>
+  </div>
 </footer>
 @if (showFloatingCart()) {
   <a
