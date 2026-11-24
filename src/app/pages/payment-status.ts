@@ -31,14 +31,16 @@ const MAX_CHECKS = 8;
 const MAX_PROCESSING_CHECKS = 40;
 const POLL_MS = 3000;
 
-/** The Android link back into the app (`forumlabs://app/payment-return`), with a website fallback. */
-export function appReturnLink(orderId: string | null): string {
+/**
+ * The Android link back into the app (`forumlabs://app/payment-return`). The button's link has a website
+ * fallback (My bookings) for a phone without the app. The automatic attempt on load has none: Chrome blocks
+ * opening an app without a fresh tap and would then follow the fallback to the website sign-in (seen
+ * 2026-11-24), so a blocked attempt now just leaves this page and its button.
+ */
+export function appReturnLink(orderId: string | null, fallback = true): string {
   const query = orderId ? `?order=${orderId}` : '';
-  const fallback = encodeURIComponent('https://forumlabs.in/bookings');
-  return (
-    `intent://app/payment-return${query}` +
-    `#Intent;scheme=forumlabs;package=com.forumhospital.forum_labs;S.browser_fallback_url=${fallback};end`
-  );
+  const web = fallback ? `S.browser_fallback_url=${encodeURIComponent('https://forumlabs.in/bookings')};` : '';
+  return `intent://app/payment-return${query}#Intent;scheme=forumlabs;package=com.forumhospital.forum_labs;${web}end`;
 }
 
 @Component({
@@ -476,7 +478,7 @@ export class PaymentStatus {
     // Try the app straight away; the button stays for a browser that wants a tap first.
     effect(() => {
       if (!this.forApp() || !isPlatformBrowser(this.platform)) return;
-      const link = this.rawAppLink();
+      const link = appReturnLink(paymentOrderId(this.params()), false);
       untracked(() => this.document.defaultView?.location.assign(link));
     });
     inject(DestroyRef).onDestroy(() => this.stop());

@@ -99,6 +99,13 @@ describe('Website payment return', () => {
       expect(appReturnLink(null)).toContain('intent://app/payment-return#Intent;');
     });
 
+    it('the automatic attempt has no website fallback, so a blocked attempt never lands on sign-in (2026-11-24)', () => {
+      expect(appReturnLink(orderId, false)).toBe(
+        `intent://app/payment-return?order=${orderId}#Intent;scheme=forumlabs;package=com.forumhospital.forum_labs;end`,
+      );
+      expect(appReturnLink(orderId, false)).not.toContain('browser_fallback_url');
+    });
+
     it('a booking card on the website never shows it, even with app=1', () => {
       const fixture = mount({ platform: 'server', app: true, embedded: true });
       expect(fixture.nativeElement.textContent).not.toContain('Taking you back to the Forum Labs app');
