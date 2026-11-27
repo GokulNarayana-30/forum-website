@@ -148,13 +148,28 @@ export class WebsiteApi {
         }
       }
     }
-    if (!r.ok)
+    if (!r.ok) {
+      if (r.status === 422) {
+        const error = (await r.json().catch(() => null)) as {
+          details?: { fields?: { path?: unknown }[] };
+        } | null;
+        const fields = (error?.details?.fields ?? [])
+          .map((f) => (typeof f?.path === 'string' ? f.path.replaceAll('_', ' ') : ''))
+          .filter(Boolean);
+        if (fields.length > 0) {
+          throw new WebsiteError(
+            'validation_error',
+            `Please check ${[...new Set(fields)].join(', ')} and try again.`,
+          );
+        }
+      }
       throw new WebsiteError(
         `http_${r.status}`,
         r.status === 429
           ? 'Too many requests. Please wait before trying again.'
           : 'The request was not accepted. Check your details or try again.',
       );
+    }
     if (r.status === 204) return undefined as T;
     try {
       return (await r.json()) as T;

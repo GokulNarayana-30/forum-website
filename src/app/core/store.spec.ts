@@ -519,4 +519,73 @@ describe('Customer website booking boundaries', () => {
       expect(store.banners()).toEqual([]);
     });
   });
+
+  describe('Coupons, pincode alerts, address edits, and account deletions', () => {
+    it('coupon("") handles raw Snapshot returned by DELETE /cart/coupon', async () => {
+      liveCheckout();
+      api.request.mockResolvedValueOnce({
+        cart: { id: 'cart-a', lines: store.lines() },
+        people: [],
+        quote: { kind: 'quote_ok', quote: { ...store.quote()!, discount_paise: 0 } },
+      });
+      await store.coupon('');
+      expect(api.request).toHaveBeenCalledWith('/cart/coupon', 'DELETE');
+      expect(store.error()).toBe('');
+      expect(store.quote()?.discount_paise).toBe(0);
+    });
+
+    it('coupon rejection preserves existing quote and surfaces reason message', async () => {
+      liveCheckout();
+      const beforeQuote = store.quote();
+      api.request.mockResolvedValueOnce({
+        kind: 'coupon_rejected',
+        reason: { kind: 'coupon_min_subtotal' },
+      });
+      await store.coupon('SAVE100');
+      expect(store.quote()).toEqual(beforeQuote);
+      expect(store.error()).toContain('minimum amount');
+    });
+
+    it('deleteFamily and deleteAddress handle removed and blocked_by_active_booking cleanly', async () => {
+      liveCheckout();
+      store.addresses.set([{ id: 'address-a', type: 'home', house: '12', area: 'Test', pincode: '560068' }]);
+      api.request.mockResolvedValueOnce({ kind: 'blocked_by_active_booking' });
+      expect(await store.deleteFamily('fam-1')).toBe(false);
+      expect(store.error()).toContain('active booking');
+
+      api.request
+        .mockResolvedValueOnce({ kind: 'removed' })
+        .mockResolvedValueOnce([]);
+      expect(await store.deleteAddress('address-a')).toBe(true);
+      expect(store.address()).toBeNull();
+    });
+
+    it('requestServiceAlert calls PUT /serviceability/:pincode/alert when signed in', async () => {
+      liveCheckout();
+      api.request.mockResolvedValueOnce(undefined);
+      expect(await store.requestServiceAlert('560067')).toBe(true);
+      expect(api.request).toHaveBeenCalledWith('/serviceability/560067/alert', 'PUT');
+    });
+
+    it('updateAddress invalidates slot and re-checks serviceability when pincode changes', async () => {
+      liveCheckout();
+      api.request
+        .mockResolvedValueOnce({})
+        .mockResolvedValueOnce([
+          { id: 'address-a', type: 'home', house: '12', area: 'New Area', pincode: '560001' },
+        ])
+        .mockResolvedValueOnce({ serviceable: true })
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce({ cart: { id: 'cart-a', lines: store.lines() }, people: [] });
+      await store.updateAddress('address-a', { house: '12', area: 'New Area', pincode: '560001' });
+      expect(store.slot()).toBeNull();
+      expect(api.request).toHaveBeenCalledWith(
+        '/serviceability/560001',
+        'GET',
+        undefined,
+        undefined,
+        false,
+      );
+    });
+  });
 });

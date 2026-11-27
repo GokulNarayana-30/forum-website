@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /tests
+Disallow: /account
+Disallow: /bookings
+Disallow: /reports
+Disallow: /checkout
+Disallow: /payment-status
+Disallow: /chat
+Disallow: /auth/callback
+
+Sitemap: https://forumhospital.com/sitemap.xml

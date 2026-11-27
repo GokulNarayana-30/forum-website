@@ -158,6 +158,7 @@ export class WebsiteStore {
   readonly canEdit = computed(() => !this.busy() && !this.attempt());
   private guestIds: string[] = [];
   private consentAt = '';
+  private initPromise: Promise<void> | null = null;
 
   constructor() {
     let wasSignedIn = false;
@@ -212,8 +213,11 @@ export class WebsiteStore {
     }
   }
   async initialize(callback = false): Promise<void> {
+    if (this.initPromise && !callback) {
+      return this.initPromise;
+    }
     if (callback) this.ready.set(false);
-    await this.run(async () => {
+    const runInit = this.run(async () => {
       await this.api.configure();
       if (this.preview()) {
         this.ready.set(true);
@@ -249,10 +253,15 @@ export class WebsiteStore {
       this.restoreGuestLines();
       if (callback) {
         await this.api.finishSignIn();
-        await this.api.request('/me/consents/terms', 'PUT', {
-          text_version: 'terms-2026-10-draft',
-        });
-        await this.loadAccount();
+        try {
+          await this.api.request('/me/consents/terms', 'PUT', {
+            text_version: 'terms-2026-10-draft',
+          });
+          await this.loadAccount();
+        } catch {
+          if (this.api.signedIn())
+            this.message.set('Your account could not be loaded. Refresh the page to try again.');
+        }
       } else if (await this.api.restoreSession()) {
         // A refresh keeps the visitor signed in: bring their account back the same way sign-in does.
         try {
@@ -263,7 +272,15 @@ export class WebsiteStore {
         }
       }
       this.ready.set(true);
-    });
+    })
+      .then(() => undefined)
+      .finally(() => {
+        if (this.initPromise === runInit) {
+          this.initPromise = null;
+        }
+      });
+    this.initPromise = runInit;
+    return runInit;
   }
   /** Banners are decoration: a failure here never blocks the catalogue or shows an error. */
   async loadBanners(): Promise<void> {
@@ -383,6 +400,9 @@ export class WebsiteStore {
       throw new WebsiteError('response');
     this.quote.set(quote);
     this.priceChanged.set(s.quote?.kind === 'quote_price_changed');
+    if (s.dropped_coupon?.code) {
+      this.message.set(`Coupon ${s.dropped_coupon.code} was removed because cart conditions changed.`);
+    }
   }
   private async cartResult(result: Outcome): Promise<void> {
     if (result.snapshot) {
@@ -732,24 +752,47 @@ export class WebsiteStore {
   async coupon(code: string): Promise<void> {
     if (!this.canEdit()) return;
     await this.run(async () => {
-      this.invalidate();
       if (this.preview()) {
+        this.invalidate();
         this.message.set(
           'Coupons are checked by Forum when live booking is connected. No discount has been applied in this preview.',
         );
         return;
       }
-      const r = await this.api.request<Outcome>(
-        '/cart/coupon',
-        code.trim() ? 'PUT' : 'DELETE',
-        code.trim() ? { code: code.trim() } : undefined,
-      );
-      if (r.snapshot) this.applySnapshot(r.snapshot);
-      if (r.kind !== 'coupon_applied' && r.kind !== 'coupon_removed')
-        throw new WebsiteError(
-          'coupon',
+      const trimmed = code.trim();
+      if (!trimmed) {
+        const removed = await this.api.request<Snapshot | Outcome>('/cart/coupon', 'DELETE');
+        this.invalidate();
+        if (removed && 'cart' in removed && Array.isArray(removed.cart?.lines)) {
+          this.applySnapshot(removed as Snapshot);
+        } else if (removed && 'snapshot' in removed && removed.snapshot) {
+          this.applySnapshot(removed.snapshot);
+        }
+        this.message.set('Coupon removed.');
+        return;
+      }
+      const r = await this.api.request<Outcome>('/cart/coupon', 'PUT', { code: trimmed });
+      if (r.kind === 'coupon_applied' && r.snapshot) {
+        this.invalidate();
+        this.applySnapshot(r.snapshot);
+        this.message.set('Coupon applied.');
+        return;
+      }
+      const reasonMessages: Record<string, string> = {
+        coupon_unknown: 'Coupon code was not recognized.',
+        coupon_expired: 'This coupon has expired.',
+        coupon_inactive: 'This coupon is not active right now.',
+        coupon_already_used: 'You have already used this coupon.',
+        coupon_limit_reached: 'This coupon has reached its redemption limit.',
+        coupon_min_subtotal: 'Your cart total is below the minimum amount required for this coupon.',
+        coupon_not_applicable: 'This coupon does not apply to the items in your cart.',
+      };
+      const reasonKind = r.reason?.kind ?? '';
+      throw new WebsiteError(
+        'coupon',
+        reasonMessages[reasonKind] ??
           'This coupon could not be applied. Check its conditions or continue without it.',
-        );
+      );
     });
   }
   async acceptPrice(): Promise<void> {
@@ -1156,18 +1199,120 @@ export class WebsiteStore {
   /** Changes a saved address, keeping its id; the list is read again so checkout sees the new text. */
   async updateAddress(id: string, data: Record<string, unknown>): Promise<void> {
     if (this.preview()) return;
+    const prevPincode =
+      this.addresses().find((a) => a.id === id)?.pincode ??
+      (this.address()?.id === id ? this.address()?.pincode : undefined) ??
+      null;
+    let recheckAddressId: string | null = null;
     await this.run(async () => {
       await this.api.request('/me/addresses/' + encodeURIComponent(id), 'PATCH', data);
       this.addresses.set(await this.api.request<Address[]>('/me/addresses'));
       const open = this.address();
-      if (open) this.address.set(this.addresses().find((a) => a.id === open.id) ?? null);
+      if (open && open.id === id) {
+        const updated = this.addresses().find((a) => a.id === open.id) ?? null;
+        this.address.set(updated);
+        if (!updated || (prevPincode && updated.pincode !== prevPincode)) {
+          this.invalidate();
+          this.slot.set(null);
+          this.held.set(false);
+          this.holdExpires.set(0);
+          this.days.set([]);
+          this.quote.set(null);
+          if (updated) {
+            recheckAddressId = updated.id;
+          }
+        }
+      }
     });
+    if (recheckAddressId) {
+      await this.chooseAddress(recheckAddressId);
+    }
   }
   async addAddress(data: Record<string, unknown>): Promise<void> {
     if (this.preview()) return;
     await this.run(async () => {
       await this.api.request('/me/addresses', 'POST', data, 'addr_' + crypto.randomUUID());
       this.addresses.set(await this.api.request<Address[]>('/me/addresses'));
+    });
+  }
+  async deleteFamily(id: string): Promise<boolean> {
+    if (this.preview()) return false;
+    let deleted = false;
+    await this.run(async () => {
+      const res = await this.api.request<{ kind: string }>(
+        '/me/family/' + encodeURIComponent(id),
+        'DELETE',
+      );
+      if (res?.kind === 'blocked_by_active_booking') {
+        throw new WebsiteError(
+          'blocked_by_active_booking',
+          'This family member has an active booking and cannot be removed right now.',
+        );
+      }
+      deleted = true;
+      await this.loadAccount();
+      this.message.set('Family member removed.');
+    });
+    return deleted;
+  }
+  async deleteAddress(id: string): Promise<boolean> {
+    if (this.preview()) return false;
+    let deleted = false;
+    await this.run(async () => {
+      const res = await this.api.request<{ kind: string }>(
+        '/me/addresses/' + encodeURIComponent(id),
+        'DELETE',
+      );
+      if (res?.kind === 'blocked_by_active_booking') {
+        throw new WebsiteError(
+          'blocked_by_active_booking',
+          'This address is used by an active booking and cannot be removed right now.',
+        );
+      }
+      deleted = true;
+      this.addresses.set(await this.api.request<Address[]>('/me/addresses'));
+      if (this.address()?.id === id) {
+        this.address.set(null);
+        this.slot.set(null);
+        this.held.set(false);
+        this.days.set([]);
+        this.invalidate();
+      }
+      this.message.set('Address removed.');
+    });
+    return deleted;
+  }
+  async cancelOrder(orderId: string, reasonCode: string): Promise<boolean> {
+    if (this.preview()) return false;
+    let cancelled = false;
+    await this.run(async () => {
+      const key = 'can_' + crypto.randomUUID().replaceAll('-', '');
+      const res = await this.api.request<{ kind?: string }>(
+        '/orders/' + encodeURIComponent(orderId) + '/cancellation',
+        'POST',
+        { reason_code: reasonCode },
+        key,
+      );
+      if (res?.kind && res.kind.includes('not_allowed')) {
+        throw new WebsiteError(
+          'cancel_not_allowed',
+          'This booking can no longer be cancelled online. Contact support for help.',
+        );
+      }
+      cancelled = true;
+      this.orders.set(await this.api.request<Order[]>('/orders'));
+      this.message.set('Your booking has been cancelled.');
+    });
+    return cancelled;
+  }
+  async requestServiceAlert(pincode: string): Promise<boolean> {
+    if (this.preview() || !this.signedIn()) return false;
+    return this.run(async () => {
+      await this.api.request(
+        '/serviceability/' + encodeURIComponent(pincode) + '/alert',
+        'PUT',
+      );
+      this.message.set(`We’ll notify you when home collection opens in ${pincode}.`);
     });
   }
 }

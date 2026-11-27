@@ -59,6 +59,7 @@ export function loadGoogleMaps(key: string | undefined): Promise<MapsLibrary> {
     if (window.google?.maps?.importLibrary) return ready();
     const script = document.createElement('script');
     script.async = true;
+    script.referrerPolicy = 'strict-origin-when-cross-origin';
     script.src =
       'https://maps.googleapis.com/maps/api/js?key=' +
       encodeURIComponent(key) +

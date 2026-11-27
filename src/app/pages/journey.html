@@ -544,6 +544,16 @@
                       No collection times are available for this address. Choose another address or
                       try again later.
                     </p>
+                    @if (!store.preview() && store.address(); as addr) {
+                      <button
+                        type="button"
+                        class="button outline"
+                        [disabled]="store.busy()"
+                        (click)="store.requestServiceAlert(addr.pincode)"
+                      >
+                        Notify me when we collect in {{ addr.pincode }}
+                      </button>
+                    }
                   } @else {
                     <div class="day-strip" role="tablist" aria-label="Collection day">
                       @for (day of slotDays(); track day.key) {
@@ -867,7 +877,11 @@
               </button>
             </article>
             @if (selectedOrder()?.id === order.id) {
-              <forum-booking-status [id]="'booking-status-' + order.id" [order]="order" />
+              <forum-booking-status
+                [id]="'booking-status-' + order.id"
+                [order]="order"
+                (cancelled)="store.loadOrders()"
+              />
             }
           } @empty {
             <div class="empty-state">

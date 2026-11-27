@@ -127,11 +127,35 @@ export class Account {
       pincode: address.pincode,
       landmark: address.landmark ?? '',
       access_notes: address.access_notes ?? '',
+      latitude: address.latitude ?? null,
+      longitude: address.longitude ?? null,
     };
     this.editingAddressId.set(address.id);
     this.saved.set('');
     this.saveError.set('');
     this.editing.set(true);
+  }
+  protected readonly confirmDeleteFamilyId = signal<string | null>(null);
+  protected readonly confirmDeleteAddressId = signal<string | null>(null);
+
+  protected async confirmRemoveFamily(id: string): Promise<void> {
+    if (this.store.preview() || !this.store.canEdit()) return;
+    this.confirmDeleteFamilyId.set(null);
+    this.saveError.set('');
+    this.saved.set('');
+    const ok = await this.store.deleteFamily(id);
+    if (!ok && this.store.error()) this.saveError.set(this.store.error());
+    else if (ok) this.saved.set('Family member removed.');
+  }
+
+  protected async confirmRemoveAddress(id: string): Promise<void> {
+    if (this.store.preview() || !this.store.canEdit()) return;
+    this.confirmDeleteAddressId.set(null);
+    this.saveError.set('');
+    this.saved.set('');
+    const ok = await this.store.deleteAddress(id);
+    if (!ok && this.store.error()) this.saveError.set(this.store.error());
+    else if (ok) this.saved.set('Address removed.');
   }
   /** The account's mobile, as shown: "+91 98765 43210", or "Not added". */
   protected mobileText(): string {

@@ -104,7 +104,7 @@
           }
         </div>
 
-        <div class="messages-log" role="log" aria-live="polite" aria-label="Chat messages">
+        <div #messagesLog class="messages-log" role="log" aria-live="polite" aria-label="Chat messages">
           @for (msg of chat.messages(); track msg.id) {
             <article class="msg" [class.mine]="msg.sender === 'customer'">
               <div class="msg-meta">
@@ -132,29 +132,38 @@
           <p class="inline-error" role="alert">{{ chat.error() }}</p>
         }
 
-        <form class="composer" (ngSubmit)="sendLive()">
-          <label>
-            <span class="sr-only">Message</span>
-            <textarea
-              name="chatDraft"
-              rows="3"
-              maxlength="500"
-              placeholder="Write your message to Forum Labs support…"
-              [ngModel]="draft()"
-              (ngModelChange)="onDraftInput($event)"
-            ></textarea>
-          </label>
-          <div class="composer-foot">
-            <span class="hint">Text messages only · {{ draft().length }}/500</span>
-            <button
-              class="button"
-              type="submit"
-              [disabled]="!draft().trim() || chat.sending()"
-            >
-              {{ chat.sending() ? 'Sending…' : 'Send message' }}
+        @if (isActiveClosed()) {
+          <div class="notice-box" role="status">
+            <p>This conversation has been marked {{ statusText(chat.ticket()!.status) }}.</p>
+            <button class="button outline small" type="button" (click)="startNewConversation()">
+              Start a new conversation
             </button>
           </div>
-        </form>
+        } @else {
+          <form class="composer" (ngSubmit)="sendLive()">
+            <label>
+              <span class="sr-only">Message</span>
+              <textarea
+                name="chatDraft"
+                rows="3"
+                maxlength="500"
+                placeholder="Write your message to Forum Labs support…"
+                [ngModel]="draft()"
+                (ngModelChange)="onDraftInput($event)"
+              ></textarea>
+            </label>
+            <div class="composer-foot">
+              <span class="hint">Text messages only · {{ draft().length }}/500</span>
+              <button
+                class="button"
+                type="submit"
+                [disabled]="!draft().trim() || chat.sending()"
+              >
+                {{ chat.sending() ? 'Sending…' : 'Send message' }}
+              </button>
+            </div>
+          </form>
+        }
       </section>
 
       <aside class="panel chat-history" aria-label="My past support requests">

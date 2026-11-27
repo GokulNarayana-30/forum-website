@@ -132,6 +132,57 @@ describe('Booking status feedback', () => {
     expect(fixture.nativeElement.textContent).toContain('No tracking updates yet.');
     expect(fixture.nativeElement.textContent).not.toContain('On the way');
   });
+
+  it('cancels a cancellable booking only with a chosen reason code', async () => {
+    request
+      .mockResolvedValueOnce(history())
+      .mockResolvedValueOnce({ kind: 'order_cancelled' })
+      .mockResolvedValueOnce(history());
+    const fixture = await render();
+    const cancelBtn = Array.from(fixture.nativeElement.querySelectorAll('button')).find((b: any) =>
+      b.textContent?.includes('Cancel booking'),
+    ) as HTMLButtonElement;
+    expect(cancelBtn).toBeDefined();
+    cancelBtn.click();
+    fixture.detectChanges();
+
+    const select = fixture.nativeElement.querySelector('select') as HTMLSelectElement;
+    select.value = 'changed_plans';
+    select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    const confirmBtn = Array.from(fixture.nativeElement.querySelectorAll('button')).find((b: any) =>
+      b.textContent?.includes('Confirm cancellation'),
+    ) as HTMLButtonElement;
+    confirmBtn.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(request).toHaveBeenCalledWith(
+      '/orders/sample-order/cancellation',
+      'POST',
+      { reason_code: 'changed_plans' },
+      expect.stringMatching(/^can_/),
+    );
+    expect(fixture.nativeElement.textContent).toContain('cancelled');
+  });
+
+  it('requests a short-lived HTTPS receipt link for paid/collected orders', async () => {
+    request.mockResolvedValueOnce(history()).mockResolvedValueOnce({
+      source: 'https://files.example.invalid/receipt.pdf',
+      expires_at: '2099-01-01T00:00:00Z',
+    });
+    const fixture = await render({ ...order, payment_status: 'paid' });
+    const receiptBtn = Array.from(fixture.nativeElement.querySelectorAll('button')).find((b: any) =>
+      b.textContent?.includes('Get receipt'),
+    ) as HTMLButtonElement;
+    receiptBtn.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(request).toHaveBeenCalledWith('/orders/sample-order/invoice/document-links', 'POST');
+    expect(fixture.nativeElement.textContent).toContain('Download receipt PDF');
+  });
 });
 
 describe('My bookings status button', () => {

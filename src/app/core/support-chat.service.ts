@@ -438,6 +438,17 @@ export class SupportChatService {
     }
   }
 
+  startNewConversation(): void {
+    this.disconnect(1000, 'new_conversation');
+    this.activeTicketId = null;
+    this.visibleTicketId = null;
+    this.ticket.set(null);
+    this.messages.set([]);
+    this.readState.set(null);
+    this.lastKnownSeq.set(0);
+    this.error.set('');
+  }
+
   sendTyping(ticketId: string, isTyping: boolean): void {
     if (!this.canConnectLive() || !this.authorized || this.joinedTicketId !== ticketId) return;
     if (isTyping) {

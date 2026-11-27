@@ -24,11 +24,13 @@ function fakeStore() {
       { id: 'me', name: 'Sample customer', relation: 'self' },
       { id: 'family', name: 'Sample relative', relation: 'parent' },
     ]),
-    addresses: signal([]),
+    addresses: signal<any[]>([]),
     saveProfile: vi.fn().mockResolvedValue(undefined),
     addFamily: vi.fn().mockResolvedValue(undefined),
     addAddress: vi.fn().mockResolvedValue(undefined),
     updateAddress: vi.fn().mockResolvedValue(undefined),
+    deleteFamily: vi.fn().mockResolvedValue(true),
+    deleteAddress: vi.fn().mockResolvedValue(true),
     signOut: vi.fn(),
   };
 }
@@ -310,5 +312,29 @@ describe('Customer account sections', () => {
     button(root, 'Family members').click();
     fixture.detectChanges();
     expect(root.textContent).not.toContain('Add member');
+  });
+
+  it('confirms before removing a saved family member or address', async () => {
+    store.addresses.set([
+      { id: 'addr-1', type: 'home', house: '12', street: 'MG Road', area: 'Indiranagar', pincode: '560038' },
+    ]);
+    const fixture = await render();
+    const root: HTMLElement = fixture.nativeElement;
+
+    button(root, 'Family members').click();
+    fixture.detectChanges();
+    button(root, 'Remove').click();
+    fixture.detectChanges();
+    button(root, 'Confirm remove').click();
+    await fixture.whenStable();
+    expect(store.deleteFamily).toHaveBeenCalledWith('family');
+
+    button(root, 'Saved addresses').click();
+    fixture.detectChanges();
+    button(root, 'Remove').click();
+    fixture.detectChanges();
+    button(root, 'Confirm remove').click();
+    await fixture.whenStable();
+    expect(store.deleteAddress).toHaveBeenCalledWith('addr-1');
   });
 });

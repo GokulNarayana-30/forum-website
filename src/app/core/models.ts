@@ -48,6 +48,8 @@ export interface Address {
   pincode: string;
   landmark?: string;
   access_notes?: string;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 export interface Line {
   id: string;
@@ -73,6 +75,7 @@ export interface Snapshot {
   cart: { id: string; lines: Line[] };
   people: Person[];
   quote?: { kind: string; quote?: Quote; current?: Quote };
+  dropped_coupon?: { code: string; reason?: { kind: string } } | null;
   issues?: { kind: string; line_id: string; reason?: string; test_name?: string }[];
   preparation?: {
     fasting_required?: boolean;
@@ -130,10 +133,40 @@ export interface Order {
   slot_ends_at?: string;
   patients: { id: string; first_name: string; relation: string }[];
   lines?: { test_name: string; amount_paise: number }[];
+  address?: {
+    house: string;
+    street?: string | null;
+    area: string;
+    pincode: string;
+    landmark?: string | null;
+  } | null;
+  can_cancel?: boolean;
+  cancel_reason_code?: string | null;
   payment_status?: string;
   payment_method_label?: string | null;
   payu_hold_expires_at?: string;
   refund?: { amount_paise: number; state: 'pending' | 'done' } | null;
+}
+
+export const CUSTOMER_CANCEL_REASONS: ReadonlyArray<{ code: string; label: string }> = [
+  { code: 'changed_plans', label: 'Plans changed' },
+  { code: 'slot_not_suitable', label: 'Collection time does not suit me' },
+  { code: 'booked_by_mistake', label: 'Booked by mistake' },
+  { code: 'duplicate_booking', label: 'Duplicate booking' },
+  { code: 'price_issue', label: 'Price or coupon issue' },
+  { code: 'doctor_advised', label: 'Doctor advised against test' },
+  { code: 'found_another_lab', label: 'Chose another lab' },
+  { code: 'other', label: 'Other reason' },
+];
+
+export function cancelReasonLabel(code: string | null | undefined): string {
+  if (!code) return '';
+  const match = CUSTOMER_CANCEL_REASONS.find((r) => r.code === code);
+  if (match) return match.label;
+  if (code === 'customer_requested') return 'Customer requested cancellation';
+  if (code === 'operational_issue') return 'Operational issue';
+  if (code === 'payment_issue') return 'Payment issue';
+  return code.replaceAll('_', ' ');
 }
 export function refundProgressText(refund: Order['refund']): string {
   if (!refund || !Number.isSafeInteger(refund.amount_paise) || refund.amount_paise <= 0) return '';

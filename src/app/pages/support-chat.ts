@@ -4,11 +4,13 @@ import {
   Component,
   computed,
   DestroyRef,
+  ElementRef,
   effect,
   inject,
   PLATFORM_ID,
   signal,
   untracked,
+  viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Meta } from '@angular/platform-browser';
@@ -36,6 +38,12 @@ export class SupportChat {
   protected readonly draft = signal('');
   protected readonly historyReply = signal('');
   protected readonly instant = instant;
+  private readonly messagesLog = viewChild<ElementRef<HTMLElement>>('messagesLog');
+
+  protected readonly isActiveClosed = computed(() => {
+    const status = this.chat.ticket()?.status;
+    return status === 'closed' || status === 'resolved';
+  });
 
   protected readonly latestCustomerSeq = computed(() => {
     const msgs = this.chat.messages();
@@ -112,6 +120,17 @@ export class SupportChat {
         }
         void this.loadLiveChat(epoch);
       });
+    });
+
+    effect(() => {
+      this.chat.messages();
+      this.chat.staffTyping();
+      const log = this.messagesLog()?.nativeElement;
+      if (log && isPlatformBrowser(this.platformId)) {
+        queueMicrotask(() => {
+          log.scrollTop = log.scrollHeight;
+        });
+      }
     });
 
     this.destroyRef.onDestroy(() => {
@@ -191,6 +210,11 @@ export class SupportChat {
 
   protected statusText(status: string): string {
     return status.replaceAll('_', ' ');
+  }
+
+  protected startNewConversation(): void {
+    this.draft.set('');
+    this.chat.startNewConversation();
   }
 
   protected trackMessage(_index: number, item: CustomerTicketMessage): string {

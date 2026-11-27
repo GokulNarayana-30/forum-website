@@ -110,7 +110,7 @@
                       name="name"
                       [(ngModel)]="profileForm.name"
                       required
-                      maxlength="120"
+                      maxlength="60"
                       autocomplete="name"
                   /></label>
                   <label
@@ -146,7 +146,7 @@
                       name="familyName"
                       [(ngModel)]="familyForm.name"
                       required
-                      maxlength="120"
+                      maxlength="60"
                   /></label>
                   <label
                     >Relationship<select name="relation" [(ngModel)]="familyForm.relation">
@@ -357,6 +357,36 @@
                         <p>Born {{ birthDate(person.date_of_birth) }}</p>
                       }
                     </div>
+                    @if (!store.preview()) {
+                      <div class="record-actions">
+                        @if (confirmDeleteFamilyId() === person.id) {
+                          <button
+                            type="button"
+                            class="button outline small"
+                            [disabled]="!store.canEdit()"
+                            (click)="confirmRemoveFamily(person.id)"
+                          >
+                            Confirm remove
+                          </button>
+                          <button
+                            type="button"
+                            class="text-link"
+                            (click)="confirmDeleteFamilyId.set(null)"
+                          >
+                            Keep
+                          </button>
+                        } @else {
+                          <button
+                            type="button"
+                            class="button outline small"
+                            [disabled]="!store.canEdit()"
+                            (click)="confirmDeleteFamilyId.set(person.id)"
+                          >
+                            Remove
+                          </button>
+                        }
+                      </div>
+                    }
                   </article>
                 } @empty {
                   <div class="quiet-empty">
@@ -386,14 +416,42 @@
                       }
                     </div>
                     @if (!store.preview()) {
-                      <button
-                        type="button"
-                        class="button outline small"
-                        [disabled]="!store.canEdit()"
-                        (click)="editAddress(address)"
-                      >
-                        Edit
-                      </button>
+                      <div class="record-actions">
+                        <button
+                          type="button"
+                          class="button outline small"
+                          [disabled]="!store.canEdit()"
+                          (click)="editAddress(address)"
+                        >
+                          Edit
+                        </button>
+                        @if (confirmDeleteAddressId() === address.id) {
+                          <button
+                            type="button"
+                            class="button outline small"
+                            [disabled]="!store.canEdit()"
+                            (click)="confirmRemoveAddress(address.id)"
+                          >
+                            Confirm remove
+                          </button>
+                          <button
+                            type="button"
+                            class="text-link"
+                            (click)="confirmDeleteAddressId.set(null)"
+                          >
+                            Keep
+                          </button>
+                        } @else {
+                          <button
+                            type="button"
+                            class="button outline small"
+                            [disabled]="!store.canEdit()"
+                            (click)="confirmDeleteAddressId.set(address.id)"
+                          >
+                            Remove
+                          </button>
+                        }
+                      </div>
                     }
                   </article>
                 } @empty {

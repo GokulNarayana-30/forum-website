@@ -159,6 +159,8 @@ export class Journey {
           name: 'description',
           content: d['detail'].description ?? d['detail'].item.name,
         });
+      } else if (d['view'] !== 'detail') {
+        this.detail.set(null);
       }
     });
     effect(() => {
@@ -208,6 +210,7 @@ export class Journey {
   protected async loadDetail(): Promise<void> {
     const seq = ++this.detailSequence;
     this.detail.set(null);
+    this.store.error.set('');
     this.detailLoading.set(true);
     try {
       const d = await this.store.detail(this.route.snapshot.paramMap.get('id') ?? '');
