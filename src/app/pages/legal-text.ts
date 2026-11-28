@@ -246,7 +246,7 @@ export const PRIVACY_POLICY: LegalDoc = {
               "Global"
             ],
             [
-              "LabSmart (our laboratory information system)",
+              "Our laboratory information system",
               "Lab registration, testing and report sign-off",
               "As used by our laboratory"
             ]
@@ -612,7 +612,8 @@ export const TERMS_OF_USE: LegalDoc = {
           "kind": "ul",
           "items": [
             "These terms are governed by the laws of India.",
-            "Disputes are subject to the exclusive jurisdiction of the courts at Bengaluru, without affecting your right to approach a consumer commission."
+            "Disputes are subject to the exclusive jurisdiction of the courts at Bengaluru, without affecting your right to approach a consumer commission.",
+            "The language of judicial proceedings is English only."
           ]
         }
       ]
