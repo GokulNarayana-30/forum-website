@@ -38,14 +38,28 @@ import { Account } from './account';
 import { PhoneCode } from './phone-code';
 import { FastingDialog } from './fasting-dialog';
 import { OnlineOffDialog } from './online-off-dialog';
+import { LegalDocument } from './legal-document';
+import { PRIVACY_POLICY, TERMS_OF_USE } from './legal-text';
 @Component({
   selector: 'forum-journey',
-  imports: [FormsModule, RouterLink, Summary, BookingStatus, Account, PhoneCode, FastingDialog, OnlineOffDialog],
+  imports: [
+    FormsModule,
+    RouterLink,
+    Summary,
+    BookingStatus,
+    Account,
+    PhoneCode,
+    FastingDialog,
+    OnlineOffDialog,
+    LegalDocument,
+  ],
   templateUrl: './journey.html',
   styleUrl: './journey.scss',
   host: { '(window:pageshow)': 'onPageShow($event)' },
 })
 export class Journey {
+  protected readonly privacyPolicy = PRIVACY_POLICY;
+  protected readonly termsOfUse = TERMS_OF_USE;
   protected readonly store = inject(WebsiteStore);
   private readonly chat = inject(SupportChatService);
   private readonly platformId = inject(PLATFORM_ID);
@@ -81,14 +95,21 @@ export class Journey {
   protected readonly onlineOffOpen = signal(false);
   protected readonly fastingHours = computed(() => {
     const preparation = this.store.snapshot()?.preparation;
-    if (preparation) return { min: preparation.fasting_hours_min ?? null, max: preparation.fasting_hours_max ?? null };
+    if (preparation)
+      return {
+        min: preparation.fasting_hours_min ?? null,
+        max: preparation.fasting_hours_max ?? null,
+      };
     const fasting = this.store
       .lines()
       .map((line) => this.store.items().find((item) => item.id === line.item_id))
       .filter((item) => item?.fasting_required);
     const mins = fasting.map((item) => item?.fasting_hours_min ?? 0).filter(Boolean);
     const maxes = fasting.map((item) => item?.fasting_hours_max ?? 0).filter(Boolean);
-    return { min: mins.length ? Math.max(...mins) : null, max: maxes.length ? Math.max(...maxes) : null };
+    return {
+      min: mins.length ? Math.max(...mins) : null,
+      max: maxes.length ? Math.max(...maxes) : null,
+    };
   });
   protected fastingHoursShort(): string {
     const { min, max } = this.fastingHours();
@@ -115,10 +136,14 @@ export class Journey {
     const days = this.slotDays();
     const held = this.store.slot();
     const heldDay = held
-      ? days.find((day) => day.groups.some((group) => group.slots.some((slot) => slot.id === held.id)))?.key
+      ? days.find((day) =>
+          day.groups.some((group) => group.slots.some((slot) => slot.id === held.id)),
+        )?.key
       : undefined;
     const key = this.chosenDay() ?? heldDay;
-    return days.find((day) => day.key === key) ?? days.find((day) => day.open > 0) ?? days[0] ?? null;
+    return (
+      days.find((day) => day.key === key) ?? days.find((day) => day.open > 0) ?? days[0] ?? null
+    );
   });
   protected couponCode = '';
   protected paymentEmail = '';

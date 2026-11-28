@@ -319,8 +319,8 @@
             <div class="panel subtle">
               <h3>Booking for your family?</h3>
               <p>
-                Assign each test to the right person in the Patients &amp; address step. Each patient receives
-                their own booking and report.
+                Assign each test to the right person in the Patients &amp; address step. Each
+                patient receives their own booking and report.
               </p>
             </div>
             <div class="actions">
@@ -566,8 +566,11 @@
                           [disabled]="!store.canEdit() || !day.open"
                           (click)="chosenDay.set(day.key)"
                         >
-                          <strong>{{ day.title }}</strong><span>{{ day.date }}</span
-                          ><small>{{ day.open ? day.open + (day.open === 1 ? ' time' : ' times') : 'Full' }}</small>
+                          <strong>{{ day.title }}</strong
+                          ><span>{{ day.date }}</span
+                          ><small>{{
+                            day.open ? day.open + (day.open === 1 ? ' time' : ' times') : 'Full'
+                          }}</small>
                         </button>
                       }
                     </div>
@@ -745,9 +748,8 @@
                     /><span
                       >I consent to the selected diagnostic tests and home sample collection for the
                       listed patients, and confirm I am authorised to book for them. I have read the
-                      {{ store.needsFasting() ? 'fasting instructions and ' : '' }}<a routerLink="/privacy"
-                        >privacy notice</a
-                      >.</span
+                      {{ store.needsFasting() ? 'fasting instructions and ' : ''
+                      }}<a routerLink="/privacy">privacy notice</a>.</span
                     ></label
                   >
                   <p class="hint">
@@ -961,53 +963,10 @@
       <forum-account />
     }
     @case ('privacy') {
-      <article class="legal panel">
-        <p class="eyebrow">YOUR INFORMATION</p>
-        <h1>Privacy information.</h1>
-        <p>
-          This website uses your account, patient and collection details to arrange lab services.
-          Business data is handled by Forum’s API. Reports are private and are opened through
-          short-lived authenticated links.
-        </p>
-        <p>
-          Preview mode uses fictional people and example slots. It does not send a booking or
-          collect personal details.
-        </p>
-        <p>
-          In live mode, Google sign-in is provided through Supabase Auth. Your sign-in token stays
-          in memory for the session. A temporary verifier is saved only while completing sign-in.
-          Guest test selections and an unresolved booking reference may be kept in your browser’s
-          session storage so a retry can be handled safely.
-        </p>
-        <p>
-          Hospital-approved privacy wording, retention details and contact information must be
-          confirmed before public launch. This local version is not ready for public patient use.
-        </p>
-        <a class="text-link" routerLink="/help">Privacy or account questions →</a>
-      </article>
+      <forum-legal-document [doc]="privacyPolicy" />
     }
     @case ('terms') {
-      <article class="legal panel">
-        <p class="eyebrow">BEFORE BOOKING</p>
-        <h1>Terms information.</h1>
-        <p>
-          Lab test information is not a diagnosis. Ask a qualified clinician which tests are
-          suitable and how to interpret results.
-        </p>
-        <p>
-          Payment is due at collection, by cash or UPI to the phlebotomist. Availability, prices and
-          preparation are confirmed through Forum’s booking service. Cancellation policy is shown
-          before a live booking is placed.
-        </p>
-        <p>
-          You must be authorised to book and share information for other patients. A parent or
-          guardian must confirm for a person under 18.
-        </p>
-        <p>
-          These local development terms require the hospital’s approval before public launch. No
-          booking is created in preview mode.
-        </p>
-      </article>
+      <forum-legal-document [doc]="termsOfUse" />
     }
     @case ('help') {
       <section class="legal panel">
